@@ -1,30 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import { 
   MapPin, Clock, Calendar, Car, Navigation, 
   CreditCard, Apple, DollarSign, CheckCircle2, Gift, UserCheck, Lock, Sparkles, 
-  User, Crown, Wallet, ArrowRight
+  User, Crown, Wallet, ArrowRight, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { Calendar as CalendarUI } from '../components/ui/calendar';
+import { format } from 'date-fns';
+
+import { calculateFare, calculateCommission } from '../utils/pricing';
 
 export const PassengerTrackingWeb = () => {
   const navigate = useNavigate();
-  const { user } = useApp();
+  const { user, setActiveRide } = useApp();
   
   const [step, setStep] = useState<'config' | 'schedule' | 'payment' | 'tracking'>('config');
   const [bookingMode, setBookingMode] = useState<'instant' | 'scheduled'>('instant');
   const [vehicleType, setVehicleType] = useState('stretch-limo');
-  const [destination, setDestination] = useState('');
-  const [date, setDate] = useState('');
+  const [dropOffLocation, setDropOffLocation] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
   const [time, setTime] = useState('');
   const [showPromo, setShowPromo] = useState(false);
+  const [showAppPopup, setShowAppPopup] = useState(false);
+
+  // Requirement: App Download Popup (Non-blocking)
+  useEffect(() => {
+    const timer = setTimeout(() => setShowAppPopup(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Requirement 4.3 & 6.3: Detect Membership Status
   const isMember = user?.isMember || false;
   const pickupLocation = user?.hotelName || "The Grand Majestic Hotel";
-  const estimatedFare = "$48.50";
+  
+
 
   // Requirement 6.5: Driver last names hidden per privacy rules
   const assignedDriver = {
@@ -35,6 +49,14 @@ export const PassengerTrackingWeb = () => {
   };
 
   const handleRequestChauffeur = () => {
+    // Requirement: Driver movement starts immediately after dropOffLocation is set
+    setActiveRide(prev => ({
+      ...(prev || {} as any),
+      dropOffLocation,
+      status: 'tracking',
+      driverMoving: true
+    }));
+
     if (bookingMode === 'scheduled') {
       setStep('schedule');
     } else {
@@ -42,9 +64,30 @@ export const PassengerTrackingWeb = () => {
     }
   };
 
-  const handlePaymentSelection = () => {
+  const handlePaymentSelection = (method: string) => {
+    setPaymentMethod(method);
+    
+    // Update global state for data flow
+    setActiveRide(prev => ({
+      ...(prev || {} as any),
+      dropOffLocation,
+      paymentMethod: method,
+      status: 'tracking',
+    }));
+
     setStep('tracking');
     setTimeout(() => setShowPromo(true), 1000);
+  };
+
+  const proceedToTracking = () => {
+    // Requirement 8: If payment NOT selected: set paymentMethod = null (explicit)
+    setActiveRide(prev => ({
+      ...(prev || {} as any),
+      dropOffLocation,
+      paymentMethod: null,
+      status: 'tracking',
+    }));
+    setStep('tracking');
   };
 
   return (
@@ -76,8 +119,8 @@ export const PassengerTrackingWeb = () => {
                     <input
                       type="text"
                       placeholder="Enter Drop-off Location"
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
+                      value={dropOffLocation}
+                      onChange={(e) => setDropOffLocation(e.target.value)}
                       className="w-full bg-black/50 border-2 border-[#D4AF37]/30 rounded-xl py-4 pl-12 pr-4 focus:border-[#D4AF37] outline-none font-bold text-white"
                     />
                   </div>
@@ -99,7 +142,7 @@ export const PassengerTrackingWeb = () => {
                     ))}
                   </div>
 
-                  <GoldButton onClick={handleRequestChauffeur} className="w-full py-5 text-xl uppercase font-black" disabled={!destination}>
+                  <GoldButton onClick={handleRequestChauffeur} className="w-full py-5 text-xl uppercase font-black" disabled={!dropOffLocation}>
                     Request Chauffeur
                   </GoldButton>
                 </div>
@@ -111,27 +154,71 @@ export const PassengerTrackingWeb = () => {
           {step === 'schedule' && (
             <motion.div key="schedule" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <GlassCard className="p-6">
-                <h2 className="text-xl font-bold mb-4 uppercase italic">Schedule Details</h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input type="date" className="bg-black border-2 border-[#D4AF37]/20 p-4 rounded-xl text-white outline-none" onChange={(e) => setDate(e.target.value)} />
-                    <input type="time" className="bg-black border-2 border-[#D4AF37]/20 p-4 rounded-xl text-white outline-none" onChange={(e) => setTime(e.target.value)} />
+                <h2 className="text-xl font-bold mb-2 uppercase italic text-white">Schedule a Ride</h2>
+                <p className="text-sm text-gray-400 font-medium mb-8 italic">
+                  Choose the date and time for the guest's ride.
+                </p>
+                <div className="space-y-5 mb-8">
+                  {/* Date Picker */}
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 border-[#D4AF37]/30 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] text-white text-base font-medium transition-all duration-200 [color-scheme:dark]"
+                    />
                   </div>
-                  
-                  <GoldButton 
-                    onClick={() => isMember ? navigate('/driver-list') : navigate('/membership')} 
-                    className="w-full py-4 uppercase font-black border-dashed" 
-                    icon={isMember ? <UserCheck className="w-5 h-5" /> : <Lock className="w-4 h-4" />}
-                  >
-                    {isMember ? "Select Manual Driver" : "Unlock Driver Selection"}
-                  </GoldButton>
-                  
-                  {!isMember && (
-                    <p className="text-[10px] text-gray-500 text-center uppercase font-bold tracking-widest">
-                      Manual selection is a <span className="text-[#D4AF37]">Gold Member</span> exclusive
-                    </p>
+
+                  {/* Time Picker */}
+                  <div className="relative">
+                    <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#D4AF37] w-5 h-5" />
+                    <input 
+                      type="time" 
+                      value={time}
+                      className="w-full bg-black/50 border-2 border-[#D4AF37]/30 rounded-xl py-4 pl-12 pr-4 focus:border-[#D4AF37] outline-none font-bold text-white [color-scheme:dark]" 
+                      onChange={(e) => setTime(e.target.value)} 
+                    />
+                  </div>
+
+                  {/* Schedule summary if filled */}
+                  {selectedDate && time && (
+                    <motion.div
+                      className="p-4 bg-[#D4AF37]/10 rounded-xl border-2 border-[#D4AF37]/40"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <p className="text-xs text-[#D4AF37] font-black uppercase tracking-widest mb-1">Scheduled Date & Day</p>
+                      <p className="text-lg text-white font-bold">
+                        {new Date(selectedDate + 'T' + time).toLocaleString('en-US', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                        })}
+                      </p>
+                      <p className="text-sm text-gray-400 font-medium">Time: {new Date(selectedDate + 'T' + time).toLocaleString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}</p>
+                    </motion.div>
                   )}
                 </div>
+
+                <GoldButton 
+                  onClick={() => isMember ? navigate('/driver-list') : navigate('/membership')} 
+                  className="w-full py-5 text-xl uppercase font-black" 
+                  disabled={!selectedDate || !time}
+                  icon={isMember ? <UserCheck className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                >
+                  {isMember ? "Select Manual Driver" : "Continue"}
+                </GoldButton>
+                
+                {!isMember && (
+                  <p className="text-[10px] text-gray-500 text-center uppercase font-bold tracking-widest mt-4">
+                    Manual selection is a <span className="text-[#D4AF37]">Gold Member</span> exclusive
+                  </p>
+                )}
               </GlassCard>
             </motion.div>
           )}
@@ -140,17 +227,39 @@ export const PassengerTrackingWeb = () => {
           {step === 'payment' && (
             <motion.div key="payment" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
               <GlassCard className="p-6">
-                <div className="text-center mb-6">
-                  <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Total Fare</p>
-                  <p className="text-6xl font-black text-[#D4AF37]">{estimatedFare}</p>
+                <div className="text-center mb-8">
+                  <h2 className="text-xl font-bold uppercase italic tracking-tight">Select Payment Method</h2>
+                  <p className="text-xs text-gray-500 mt-2 font-medium uppercase tracking-widest">Secure Payment Processing</p>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                  {['Apple Pay', 'Credit Card', 'Cash Payment'].map((method, idx) => (
-                    <button key={method} onClick={handlePaymentSelection} className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:border-[#D4AF37] transition-all">
-                      {idx === 0 ? <Apple className="text-[#D4AF37]" /> : idx === 1 ? <CreditCard className="text-[#D4AF37]" /> : <DollarSign className="text-[#D4AF37]" />}
-                      <span className="font-bold text-base">{method}</span>
-                    </button>
-                  ))}
+                  {[
+                    { name: 'Apple Pay', icon: Apple },
+                    { name: 'PayPal', icon: Wallet },
+                    { name: 'Credit Card', icon: CreditCard },
+                    { name: 'Cash Payment', icon: DollarSign },
+                  ].map((method) => {
+                    const MethodIcon = method.icon;
+                    return (
+                      <button 
+                        key={method.name} 
+                        onClick={() => handlePaymentSelection(method.name)} 
+                        className={`flex items-center gap-4 p-4 bg-white/5 border-2 rounded-xl transition-all ${paymentMethod === method.name ? 'border-[#D4AF37] bg-[#D4AF37]/5' : 'border-white/10 hover:border-[#D4AF37]/30'}`}
+                      >
+                        <MethodIcon className="text-[#D4AF37] w-5 h-5" />
+                        <span className="font-bold text-base text-white">{method.name}</span>
+                        {paymentMethod === method.name && <CheckCircle2 className="w-5 h-5 text-[#D4AF37] ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-8">
+                  <GoldButton onClick={proceedToTracking} className="w-full py-4 text-base uppercase font-black">
+                    Proceed to Tracking
+                  </GoldButton>
+                  <p className="text-[10px] text-gray-500 text-center mt-4 font-bold uppercase tracking-widest">
+                    You can also pay inside the vehicle
+                  </p>
                 </div>
               </GlassCard>
             </motion.div>
@@ -172,8 +281,31 @@ export const PassengerTrackingWeb = () => {
                 </div>
 
                 <h2 className="text-2xl font-black mb-1 uppercase italic">{assignedDriver.name}</h2>
-                <p className="text-gray-400 font-medium mb-6 uppercase text-xs tracking-widest">
-                   is arriving in 4 mins in a {assignedDriver.vehicle}
+                <div className="flex items-center justify-center gap-1 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <Sparkles key={i} className="w-3 h-3 text-[#D4AF37]" />
+                  ))}
+                  <span className="text-[10px] text-[#D4AF37] font-black ml-1 uppercase">{assignedDriver.rating} Rating</span>
+                </div>
+
+                <div className="relative h-2 bg-white/5 rounded-full overflow-hidden mb-6 border border-white/10">
+                  <motion.div 
+                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#D4AF37]/50 to-[#D4AF37]"
+                    initial={{ width: "10%" }}
+                    animate={{ width: "85%" }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                  />
+                  <motion.div 
+                    className="absolute top-1/2 -translate-y-1/2 left-[85%]"
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  >
+                    <Car className="w-4 h-4 text-[#D4AF37] fill-[#D4AF37]" />
+                  </motion.div>
+                </div>
+
+                <p className="text-gray-400 font-medium mb-6 uppercase text-[10px] tracking-widest">
+                   Live: Driver is {Math.floor(Math.random() * 2) + 2} mins away in a {assignedDriver.vehicle}
                 </p>
 
                 <div className="mb-6 p-4 bg-black/40 rounded-xl border border-white/5">
@@ -204,6 +336,13 @@ export const PassengerTrackingWeb = () => {
                 )}
               </GlassCard>
             </motion.div>
+          )}
+        </AnimatePresence>
+        
+        {/* Requirement: App Download Popup Trigger */}
+        <AnimatePresence>
+          {showAppPopup && (
+            <AppDownloadPopup onClose={() => setShowAppPopup(false)} />
           )}
         </AnimatePresence>
       </div>
@@ -249,5 +388,54 @@ export const PassengerTrackingWeb = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Requirement: App Download Popup (Real Modal Overlay)
+const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-sm"
+      >
+        <GlassCard className="p-8 text-center border-[#D4AF37]/40 shadow-2xl shadow-[#D4AF37]/30">
+          <div className="w-16 h-16 bg-[#D4AF37]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#D4AF37]/30">
+            <Sparkles className="w-8 h-8 text-[#D4AF37]" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-6 leading-tight">
+            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your first ride
+          </h3>
+          
+          <div className="space-y-3">
+            <GoldButton 
+              onClick={() => {
+                window.open('https://apps.apple.com', '_blank');
+                onClose();
+              }} 
+              className="w-full py-4 text-base font-black uppercase"
+            >
+              Download App
+            </GoldButton>
+            
+            <button 
+              onClick={onClose}
+              className="w-full py-3 text-sm font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+            >
+              Skip for Now
+            </button>
+          </div>
+        </GlassCard>
+      </motion.div>
+    </motion.div>
   );
 };

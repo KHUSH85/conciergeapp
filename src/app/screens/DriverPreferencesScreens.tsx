@@ -255,6 +255,8 @@ export const GuestPreferenceScreen = () => {
 };
 
 // SCREEN 6: Driver Assignment Confirmation
+import { calculateFare, calculateCommission } from '../utils/pricing';
+
 export const DriverConfirmationScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -263,14 +265,15 @@ export const DriverConfirmationScreen = () => {
   // Requirement Logic: Check if we are in scheduling mode from navigation state
   const isScheduling = location.state?.bookingMode === 'scheduled';
   const isMember = user?.isMember;
+  const paymentType = location.state?.paymentType || 'card';
   
   const driver: Driver = location.state?.driver || mockDrivers[0];
 
-  const commission = 6.75;
-  const estimatedFare = 45.00;
+  const estimatedFare = calculateFare(paymentType);
+  const commission = calculateCommission(estimatedFare);
 
   const handleConfirm = () => {
-    navigate('/driver-eta', { state: { driver } });
+    navigate('/driver-eta', { state: { driver, paymentType, estimatedFare } });
   };
 
   return (
@@ -343,26 +346,6 @@ export const DriverConfirmationScreen = () => {
             </div>
           </motion.div>
 
-          {/* Fare & Commission */}
-          <motion.div
-            className="mb-8 p-6 bg-[#D4AF37]/10 rounded-xl border-2 border-[#D4AF37]/40"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-base text-gray-400 font-medium">Estimated Fare</span>
-              <span className="text-2xl text-white font-bold">${estimatedFare.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center justify-between pt-4 border-t-2 border-[#D4AF37]/30">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-[#D4AF37]" />
-                <span className="text-base text-gray-300 font-medium">Your Commission (15%)</span>
-              </div>
-              <span className="text-2xl text-[#D4AF37] font-black">${commission.toFixed(2)}</span>
-            </div>
-          </motion.div>
-
           {/* Trust Indicators */}
           <motion.div
             className="mb-8 flex flex-wrap justify-center gap-3"
@@ -373,7 +356,7 @@ export const DriverConfirmationScreen = () => {
             {driver.verified && (
               <div className="px-4 py-2 bg-green-500/20 rounded-full border border-green-500/40 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-green-400" />
-                <span className="text-sm text-green-400 font-bold">KYC Verified</span>
+                <span className="text-sm text-green-400 font-bold">Limo Verified</span>
               </div>
             )}
             {driver.backgroundCheck && (

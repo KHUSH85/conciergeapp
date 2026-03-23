@@ -1,10 +1,61 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Loader2, Car, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Loader2, Car, ArrowLeft, Sparkles } from 'lucide-react';
 import { GlassCard, GoldButton } from '../components/GlassCard';
+
+// App Download Popup
+const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-sm"
+      >
+        <GlassCard className="p-8 text-center border-[#D4AF37]/40 shadow-2xl shadow-[#D4AF37]/30">
+          <div className="w-16 h-16 bg-[#D4AF37]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#D4AF37]/30">
+            <Sparkles className="w-8 h-8 text-[#D4AF37]" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-6 leading-tight">
+            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your first ride
+          </h3>
+          
+          <div className="space-y-3">
+            <GoldButton 
+              onClick={() => {
+                window.open('https://apps.apple.com', '_blank');
+                onClose();
+              }} 
+              className="w-full py-4 text-base font-black uppercase"
+            >
+              Download App
+            </GoldButton>
+            
+            <button 
+              onClick={onClose}
+              className="w-full py-3 text-sm font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+            >
+              Skip for Now
+            </button>
+          </div>
+        </GlassCard>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 export const WaitingForPaymentScreen = () => {
   const navigate = useNavigate();
+  const [showAppPopup, setShowAppPopup] = useState(false);
 
   return (
     <div className="min-h-screen p-4 bg-black flex flex-col items-center justify-center">
@@ -48,14 +99,26 @@ export const WaitingForPaymentScreen = () => {
               </GoldButton>
 
               <button 
+                onClick={() => setShowAppPopup(true)}
+                className="w-full py-4 px-6 rounded-xl bg-white/5 border-2 border-white/10 text-white text-xs font-bold uppercase hover:bg-white/10 transition-all"
+              >
+                Resend Tracking SMS
+              </button>
+
+              <button 
                 onClick={() => navigate(-1)}
                 className="flex items-center justify-center gap-2 w-full text-gray-600 hover:text-gray-400 transition-colors text-xs font-bold uppercase"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Config
+                Back
               </button>
             </div>
           </GlassCard>
+          <AnimatePresence>
+            {showAppPopup && (
+              <AppDownloadPopup onClose={() => setShowAppPopup(false)} />
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Informational footer for the concierge */}

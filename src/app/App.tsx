@@ -37,6 +37,7 @@ import {
   DriverConfirmationScreen,
 } from './screens/DriverPreferencesScreens';
 import { WaitingForPaymentScreen } from './screens/WaitingForPaymentScreen';
+import { ScheduleBookingScreen } from './screens/ScheduleBookingScreen';
 
 // Membership Screens
 import { MembershipScreen } from './screens/MembershipScreen';
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/profile" element={<ProfileScreen />} />
             <Route path="/no-drivers" element={<NoDriversScreen />} />
             <Route path="/waiting-payment" element={<WaitingForPaymentScreen />} />
+            <Route path="/schedule-booking" element={<ScheduleBookingScreen />} />
             
             {/* Passenger Tracking & Membership Flow */}
             <Route path="/track-ride" element={<PassengerTrackingWeb />} />

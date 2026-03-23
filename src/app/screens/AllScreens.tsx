@@ -1,5 +1,5 @@
 // This file contains all remaining screens for the TUXEDO CONCIERGE app
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import {
   Shield,
@@ -25,10 +25,12 @@ import {
   UserCheck,
   Building,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
-import { useState,useEffect } from 'react';
-import { motion } from 'motion/react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { calculateFare, calculateCommission } from '../utils/pricing';
 
 // Device Binding Screen
 export const DeviceBindingScreen = () => {
@@ -116,7 +118,7 @@ export const KYCRequiredScreen = () => {
           >
             <Upload className="w-16 h-16 text-[#D4AF37] mx-auto mb-4" />
           </motion.div>
-          <h2 className="text-2xl mb-3 text-white font-bold">KYC Verification Required</h2>
+          <h2 className="text-2xl mb-3 text-white font-bold">Limo Verification Required</h2>
           <p className="text-base text-gray-400 font-medium">Upload required documents to continue</p>
         </motion.div>
         <div className="space-y-4 mb-8">
@@ -151,6 +153,55 @@ export const KYCRequiredScreen = () => {
         </motion.div>
       </GlassCard>
     </div>
+  );
+};
+
+// App Download Popup (Shared component for Concierge screens)
+const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-sm"
+      >
+        <GlassCard className="p-8 text-center border-[#D4AF37]/40 shadow-2xl shadow-[#D4AF37]/30">
+          <div className="w-16 h-16 bg-[#D4AF37]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#D4AF37]/30">
+            <Sparkles className="w-8 h-8 text-[#D4AF37]" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-6 leading-tight">
+            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your first ride
+          </h3>
+          
+          <div className="space-y-3">
+            <GoldButton 
+              onClick={() => {
+                window.open('https://apps.apple.com', '_blank');
+                onClose();
+              }} 
+              className="w-full py-4 text-base font-black uppercase"
+            >
+              Download App
+            </GoldButton>
+            
+            <button 
+              onClick={onClose}
+              className="w-full py-3 text-sm font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+            >
+              Skip for Now
+            </button>
+          </div>
+        </GlassCard>
+      </motion.div>
+    </motion.div>
   );
 };
 
@@ -356,8 +407,49 @@ export const KYCPendingScreen = () => {
 // };
 export const GuestDetailsScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useApp();
   const [guestPhone, setGuestPhone] = useState('');
-  
+  const [guestEmail, setGuestEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [showAppPopup, setShowAppPopup] = useState(false);
+
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleEmailChange = (val: string) => {
+    setGuestEmail(val);
+    if (val && !validateEmail(val)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handleRequest = () => {
+    setShowAppPopup(true);
+  };
+
+  const finalizeBooking = () => {
+    setShowAppPopup(false);
+    
+    // REQUIREMENT: Email send logic trigger
+    if (guestEmail) {
+      console.log(`[Email Service] Tracking link sent to email: ${guestEmail}`);
+      // Simulated: Trigger sendTrackingEmail(guestEmail, 'https://tracking.link/123');
+    }
+
+    const pickupLocation = location.state?.pickupLocation || user?.hotelName || "The Grand Majestic Hotel";
+    navigate('/waiting-payment', { state: { 
+      guestPhone, 
+      guestEmail, 
+      bookingMode: 'instant',
+      pickupLocation
+    } });
+  };
+
+  const canSubmit = guestPhone && guestEmail && validateEmail(guestEmail) && !emailError;
+
   return (
     <div className="min-h-screen p-4 bg-black">
       <div className="max-w-2xl mx-auto">
@@ -370,6 +462,7 @@ export const GuestDetailsScreen = () => {
             * Tracking link will be sent automatically to the guest.
           </p>
           <div className="space-y-5 mb-8">
+            {/* Phone */}
             <div className="relative">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
               <input
@@ -377,18 +470,47 @@ export const GuestDetailsScreen = () => {
                 placeholder="Guest Phone Number"
                 value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 border-[#D4AF37]/30 text-white text-lg"
+                className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 border-[#D4AF37]/30 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all duration-200"
               />
+            </div>
+            {/* Email */}
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
+              <input
+                type="email"
+                placeholder="Guest Email Address"
+                value={guestEmail}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                className={`w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all duration-200 ${
+                  emailError
+                    ? 'border-red-500/60 focus:border-red-500'
+                    : 'border-[#D4AF37]/30 focus:border-[#D4AF37]'
+                }`}
+              />
+              {emailError && (
+                <motion.p
+                  className="text-xs text-red-400 mt-1 ml-1 font-medium"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {emailError}
+                </motion.p>
+              )}
             </div>
           </div>
           <GoldButton 
-            onClick={() => navigate('/waiting-payment')} 
-            className="w-full"
-            disabled={!guestPhone}
+            onClick={handleRequest} 
+            className="w-full uppercase font-black py-5"
+            disabled={!canSubmit}
           >
-            Continue
+            Send Chauffeur Request
           </GoldButton>
         </GlassCard>
+        <AnimatePresence>
+          {showAppPopup && (
+            <AppDownloadPopup onClose={finalizeBooking} />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -623,9 +745,8 @@ export const RideConfigScreen = () => {
               </p>
             </div>
 
-            {/* Requirement 1.1: Single Action: Call Car */}
             <GoldButton 
-              onClick={() => navigate('/confirm-dispatch')} 
+              onClick={() => navigate('/guest-details')} 
               className="w-full py-6 text-xl font-black uppercase tracking-tighter"
             >
               Request Chauffeur Now
@@ -661,12 +782,6 @@ export const ConfirmDispatchScreen = () => {
         </motion.button>
         <GlassCard className="p-8 text-center">
           <motion.h2 className="text-2xl mb-6 text-white font-bold">Confirm & Dispatch</motion.h2>
-          
-          <motion.div className="mb-8 p-6 bg-[#D4AF37]/10 rounded-xl border-2 border-[#D4AF37]/40">
-            <p className="text-sm text-gray-400 font-medium">Estimated Fare</p>
-            <p className="text-4xl text-white mb-3 font-bold">$45.00</p>
-            <p className="text-base text-[#D4AF37] font-bold">Your Commission: $6.75 (15%)</p>
-          </motion.div>
 
           <GoldButton 
             onClick={() => navigate('/guest-details')} 
@@ -928,17 +1043,21 @@ export const DriverMatchingScreen = () => {
 //     </div>
 //   );
 // };
+
+
 export const DriverETAScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Requirement 3.6: Data revealed only after driver accepts (this screen)
-  const driverData = {
-    name: "Michael T.", // Requirement 6.5: Hidden last name
+  const driver = location.state?.driver || {
+    name: "Michael T.", 
     rating: "4.9",
     car: "Mercedes-Benz S-Class",
     plate: "LUX 2024",
     eta: "3 min"
   };
+  const paymentType = location.state?.paymentType || 'card';
+  const estimatedFare = location.state?.estimatedFare || 45.00;
 
   return (
     <div className="min-h-screen p-4 bg-black">
@@ -986,7 +1105,7 @@ export const DriverETAScreen = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              {driverData.eta}
+              {driver.eta || "3 min"}
             </motion.div>
             
             <motion.p 
@@ -995,15 +1114,15 @@ export const DriverETAScreen = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              {driverData.car}
+              {driver.car || driver.vehicle?.brand + ' ' + driver.vehicle?.model}
             </motion.p>
           </div>
 
           <div className="space-y-4">
             {[
-              { label: 'Chauffeur', value: driverData.name },
-              { label: 'Rating', value: `★ ${driverData.rating}` },
-              { label: 'License Plate', value: driverData.plate },
+              { label: 'Chauffeur', value: driver.name },
+              { label: 'Rating', value: `★ ${driver.rating}` },
+              { label: 'License Plate', value: driver.plate || driver.vehicle?.plate },
             ].map(({ label, value }, index) => (
               <motion.div 
                 key={label}
@@ -1023,7 +1142,7 @@ export const DriverETAScreen = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
           >
-            <GoldButton onClick={() => navigate('/active-ride')} className="w-full mt-8 py-5 text-xl">
+            <GoldButton onClick={() => navigate('/active-ride', { state: { driver, paymentType, estimatedFare } })} className="w-full mt-8 py-5 text-xl">
               TRACK RIDE
             </GoldButton>
           </motion.div>
@@ -1036,11 +1155,15 @@ export const DriverETAScreen = () => {
 // Active Ride Screen
 export const ActiveRideScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const { driver, paymentType, estimatedFare } = location.state || {};
+
   return (
     <div className="min-h-screen p-4 bg-black">
       <div className="max-w-2xl mx-auto">
         <motion.button
-          onClick={() => navigate('/driver-eta')}
+          onClick={() => navigate(-1)}
           className="mb-6 text-base text-[#D4AF37] hover:text-[#B8962A] flex items-center gap-2 font-semibold"
           whileHover={{ x: -5 }}
           initial={{ opacity: 0, x: 20 }}
@@ -1097,7 +1220,7 @@ export const ActiveRideScreen = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <GoldButton onClick={() => navigate('/ride-completion')} className="w-full">
+            <GoldButton onClick={() => navigate('/ride-completion', { state: { driver, paymentType, estimatedFare } })} className="w-full">
               Complete Ride
             </GoldButton>
           </motion.div>
@@ -1189,42 +1312,26 @@ export const CashConfirmationScreen = () => (
 // Ride Completion Screen
 export const RideCompletionScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { activeRide } = useApp();
+  const { paymentType: statePayment, estimatedFare: stateFare } = location.state || {};
   const [rating, setRating] = useState(0);
+
+  const fare = activeRide?.fare || stateFare || calculateFare(statePayment || 'card');
+  const commission = activeRide?.commission || calculateCommission(fare);
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-black">
       <GlassCard className="p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, type: "spring" }}
-          >
-            <Check className="w-20 h-20 text-green-500 mx-auto mb-6" />
-          </motion.div>
-          <motion.h2 
-            className="text-2xl mb-4 text-white font-bold"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Ride Completed
-          </motion.h2>
           <motion.div 
-            className="p-6 bg-[#D4AF37]/10 rounded-xl mb-6 border-2 border-[#D4AF37]/40"
+            className="p-6 bg-[#D4AF37]/10 rounded-xl mb-6 border-2 border-[#D4AF37]/40 mt-4"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <p className="text-sm text-gray-400 font-medium">Fare</p>
-            <motion.p 
-              className="text-4xl text-white font-black my-2"
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
-            >
-              $45.00
-            </motion.p>
-            <p className="text-base text-[#D4AF37] font-bold">Commission Earned: $6.75</p>
+            <p className="text-sm text-[#D4AF37] font-black uppercase tracking-widest">Journey Confirmed</p>
+            <p className="text-gray-400 font-medium text-xs mt-2 uppercase tracking-tight">Driver payment processed successfully</p>
           </motion.div>
         </div>
         <motion.div 
@@ -1373,7 +1480,6 @@ export const RideHistoryScreen = () => {
               >
                 <div className="flex justify-between mb-2">
                   <span className="text-white font-bold text-base">Ride #{1000 + i}</span>
-                  <span className="text-[#D4AF37] font-black text-base">$6.75</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-400">
                   <span className="font-medium">Dec {18 - i}, 2025</span>
@@ -1417,9 +1523,8 @@ export const ManagerDashboardScreen = () => {
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
               { label: 'Total Rides', value: '284', delay: 0.1 },
-              { label: 'Commission', value: '$4,260', delay: 0.2 },
-              { label: 'Avg ETA', value: '3.8 min', delay: 0.3 },
-              { label: 'Top Driver', value: '★ 4.9', delay: 0.4 },
+              { label: 'Avg ETA', value: '3.8 min', delay: 0.2 },
+              { label: 'Top Driver', value: '★ 4.9', delay: 0.3 },
             ].map(({ label, value, delay }) => (
               <motion.div 
                 key={label} 

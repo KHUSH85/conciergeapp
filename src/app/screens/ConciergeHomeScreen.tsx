@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
-import { Car, Wallet, TrendingUp, History, User } from 'lucide-react';
+import { Car, Wallet, TrendingUp, History, User, Calendar } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'motion/react';
 
@@ -46,12 +46,26 @@ export const ConciergeHomeScreen = () => {
               <Car className="w-16 h-16 text-[#D4AF37] mx-auto mb-4" />
             </motion.div>
             <h2 className="text-2xl mb-4 text-white font-bold">Request Guest Transport</h2>
-            <GoldButton 
-              onClick={() => navigate('/ride-config')} 
-              className="w-full max-w-md mx-auto text-xl py-5 rounded-2xl"
-            >
-              CALL CAR
-            </GoldButton>
+            <div className="space-y-3 w-full max-w-md mx-auto">
+              <GoldButton 
+                onClick={() => navigate('/guest-details', { state: { bookingMode: 'instant', pickupLocation: user?.hotelName || "The Grand Majestic Hotel" } })} 
+                className="w-full text-xl py-5 rounded-2xl"
+                icon={<Car className="w-5 h-5" />}
+              >
+                Call a Car
+              </GoldButton>
+              <GoldButton 
+                onClick={() => navigate('/schedule-booking')} 
+                className="w-full text-xl py-5 rounded-2xl"
+                variant="secondary"
+                icon={<Calendar className="w-5 h-5" />}
+              >
+                <div className="text-center">
+                  <p className="text-xl font-bold">Schedule a Ride</p>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Schedule Reservation</p>
+                </div>
+              </GoldButton>
+            </div>
             <p className="mt-4 text-sm text-gray-500 font-medium italic">
               Tracking link will be sent automatically to the guest
             </p>
@@ -97,7 +111,7 @@ export const ConciergeHomeScreen = () => {
           >
             Ride History
           </GoldButton>
-          <GoldButton 
+            <GoldButton 
             variant="ghost" 
             onClick={() => navigate('/wallet')} 
             className="p-4 justify-center text-lg border-[#D4AF37]/20"
