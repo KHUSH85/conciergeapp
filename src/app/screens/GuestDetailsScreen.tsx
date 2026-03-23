@@ -1,0 +1,1 @@
+export { GuestDetailsScreen } from './AllScreens';

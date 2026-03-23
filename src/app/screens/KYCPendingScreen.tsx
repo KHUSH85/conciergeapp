@@ -1,0 +1,1 @@
+export { KYCPendingScreen } from './AllScreens';

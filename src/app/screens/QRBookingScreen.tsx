@@ -1,0 +1,1 @@
+    export { QRBookingScreen } from './AllScreens';

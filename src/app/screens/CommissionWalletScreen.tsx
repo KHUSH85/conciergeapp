@@ -1,0 +1,1 @@
+export { CommissionWalletScreen } from './AllScreens';

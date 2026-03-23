@@ -1,0 +1,1 @@
+export { DeviceBindingScreen } from './AllScreens';
