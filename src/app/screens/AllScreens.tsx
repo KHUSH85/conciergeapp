@@ -156,54 +156,7 @@ export const KYCRequiredScreen = () => {
   );
 };
 
-// App Download Popup (Shared component for Concierge screens)
-const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
-  return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm"
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-full max-w-sm"
-      >
-        <GlassCard className="p-8 text-center border-[#D4AF37]/40 shadow-2xl shadow-[#D4AF37]/30">
-          <div className="w-16 h-16 bg-[#D4AF37]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#D4AF37]/30">
-            <Sparkles className="w-8 h-8 text-[#D4AF37]" />
-          </div>
-          
-          <h3 className="text-xl font-bold text-white mb-6 leading-tight">
-            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your first ride
-          </h3>
-          
-          <div className="space-y-3">
-            <GoldButton 
-              onClick={() => {
-                window.open('https://apps.apple.com', '_blank');
-                onClose();
-              }} 
-              className="w-full py-4 text-base font-black uppercase"
-            >
-              Download App
-            </GoldButton>
-            
-            <button 
-              onClick={onClose}
-              className="w-full py-3 text-sm font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
-            >
-              Skip for Now
-            </button>
-          </div>
-        </GlassCard>
-      </motion.div>
-    </motion.div>
-  );
-};
+
 
 // KYC Pending Screen
 export const KYCPendingScreen = () => {
@@ -412,7 +365,7 @@ export const GuestDetailsScreen = () => {
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [showAppPopup, setShowAppPopup] = useState(false);
+  const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
 
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -427,28 +380,25 @@ export const GuestDetailsScreen = () => {
   };
 
   const handleRequest = () => {
-    setShowAppPopup(true);
-  };
-
-  const finalizeBooking = () => {
-    setShowAppPopup(false);
-    
-    // REQUIREMENT: Email send logic trigger
-    if (guestEmail) {
+    // REQUIREMENT: Tracking link send logic trigger
+    if (contactMethod === 'email' && guestEmail) {
       console.log(`[Email Service] Tracking link sent to email: ${guestEmail}`);
-      // Simulated: Trigger sendTrackingEmail(guestEmail, 'https://tracking.link/123');
+    } else if (contactMethod === 'phone' && guestPhone) {
+      console.log(`[SMS Service] Tracking link sent to phone: ${guestPhone}`);
     }
 
     const pickupLocation = location.state?.pickupLocation || user?.hotelName || "The Grand Majestic Hotel";
     navigate('/waiting-payment', { state: { 
-      guestPhone, 
-      guestEmail, 
+      guestPhone: contactMethod === 'phone' ? guestPhone : '', 
+      guestEmail: contactMethod === 'email' ? guestEmail : '', 
       bookingMode: 'instant',
       pickupLocation
     } });
   };
 
-  const canSubmit = guestPhone && guestEmail && validateEmail(guestEmail) && !emailError;
+  const canSubmit = contactMethod === 'phone' 
+    ? guestPhone.length > 5 
+    : (guestEmail && validateEmail(guestEmail) && !emailError);
 
   return (
     <div className="min-h-screen p-4 bg-black">
@@ -461,43 +411,71 @@ export const GuestDetailsScreen = () => {
           <p className="text-sm text-gray-400 mb-6 font-medium italic">
             * Tracking link will be sent automatically to the guest.
           </p>
-          <div className="space-y-5 mb-8">
-            {/* Phone */}
-            <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
-              <input
-                type="tel"
-                placeholder="Guest Phone Number"
-                value={guestPhone}
-                onChange={(e) => setGuestPhone(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 border-[#D4AF37]/30 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all duration-200"
-              />
-            </div>
-            {/* Email */}
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
-              <input
-                type="email"
-                placeholder="Guest Email Address"
-                value={guestEmail}
-                onChange={(e) => handleEmailChange(e.target.value)}
-                className={`w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all duration-200 ${
-                  emailError
-                    ? 'border-red-500/60 focus:border-red-500'
-                    : 'border-[#D4AF37]/30 focus:border-[#D4AF37]'
-                }`}
-              />
-              {emailError && (
-                <motion.p
-                  className="text-xs text-red-400 mt-1 ml-1 font-medium"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+          
+          <div className="space-y-6 mb-8">
+            <AnimatePresence mode="wait">
+              {contactMethod === 'phone' ? (
+                <motion.div 
+                  key="phone"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="relative"
                 >
-                  {emailError}
-                </motion.p>
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
+                  <input
+                    type="tel"
+                    placeholder="Guest Phone Number"
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 border-[#D4AF37]/30 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-[#D4AF37] transition-all duration-200"
+                  />
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key="email"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="relative"
+                >
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#D4AF37]" />
+                  <input
+                    type="email"
+                    placeholder="Guest Email Address"
+                    value={guestEmail}
+                    onChange={(e) => handleEmailChange(e.target.value)}
+                    className={`w-full pl-12 pr-4 py-4 rounded-xl bg-black/60 border-2 text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all duration-200 ${
+                      emailError
+                        ? 'border-red-500/60 focus:border-red-500'
+                        : 'border-[#D4AF37]/30 focus:border-[#D4AF37]'
+                    }`}
+                  />
+                  {emailError && (
+                    <motion.p
+                      className="text-xs text-red-400 mt-1 ml-1 font-medium"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      {emailError}
+                    </motion.p>
+                  )}
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
+
+            <button 
+              onClick={() => setContactMethod(contactMethod === 'phone' ? 'email' : 'phone')}
+              className="text-[#D4AF37] text-sm font-bold hover:underline transition-all flex items-center gap-2"
+            >
+              {contactMethod === 'phone' ? (
+                <>Don't have a phone? Use Email instead</>
+              ) : (
+                <>Use Phone Number instead</>
+              )}
+            </button>
           </div>
+
           <GoldButton 
             onClick={handleRequest} 
             className="w-full uppercase font-black py-5"
@@ -506,11 +484,6 @@ export const GuestDetailsScreen = () => {
             Send Chauffeur Request
           </GoldButton>
         </GlassCard>
-        <AnimatePresence>
-          {showAppPopup && (
-            <AppDownloadPopup onClose={finalizeBooking} />
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

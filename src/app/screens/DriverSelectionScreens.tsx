@@ -135,7 +135,7 @@ export const DriverAssignmentModeScreen = () => {
 export const DriverListScreen = () => {
   const navigate = useNavigate();
   const { user } = useApp();
-  const isMember = user?.isMember || false;
+  const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
   const [drivers] = useState<Driver[]>(mockDrivers);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -281,7 +281,7 @@ export const DriverListScreen = () => {
 export const DriverProfileScreen = () => {
   const navigate = useNavigate();
   const { user } = useApp();
-  const isMember = user?.isMember || false;
+  const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
   const location = (window.history.state && window.history.state.usr) || {};
   const driver = location.driver || mockDrivers[0];
 

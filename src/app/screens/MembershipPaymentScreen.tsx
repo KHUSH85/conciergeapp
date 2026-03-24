@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
-import { CreditCard, Apple, ShieldCheck, Zap } from 'lucide-react';
+import { CreditCard, Apple, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { User } from '../types';
 import { motion } from 'motion/react';
@@ -10,6 +10,9 @@ export const MembershipPaymentScreen = () => {
   const { setUser } = useApp();
 
   const handlePayment = () => {
+    // Persist membership globally across refreshes.
+    localStorage.setItem('isMember', 'true');
+
     // Requirement 6.1, 6.2 & 6.3 Implementation
     setUser((prev: User | null) => {
       if (!prev) return null;
@@ -28,6 +31,14 @@ export const MembershipPaymentScreen = () => {
     <div className="min-h-screen p-4 bg-black flex items-center justify-center">
       <div className="max-w-md w-full">
         <GlassCard className="p-8 border-[#D4AF37]/30 shadow-2xl shadow-[#D4AF37]/5">
+          <button
+            onClick={() => navigate(-1)}
+            className="mb-6 text-base text-[#D4AF37] hover:text-[#B8962A] flex items-center gap-2 font-semibold"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+
           <div className="text-center mb-8">
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}

@@ -4,7 +4,7 @@ import { GlassCard, GoldButton } from '../components/GlassCard';
 import { 
   MapPin, Clock, Calendar, Car, Navigation, 
   CreditCard, Apple, DollarSign, CheckCircle2, Gift, UserCheck, Lock, Sparkles, 
-  User, Crown, Wallet, ArrowRight, ChevronRight
+  User, Crown, Wallet, ArrowRight, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
@@ -35,8 +35,23 @@ export const PassengerTrackingWeb = () => {
   }, []);
 
   // Requirement 4.3 & 6.3: Detect Membership Status
-  const isMember = user?.isMember || false;
+  const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
+  const isMemberFromStorage = localStorage.getItem('isMember') === 'true';
   const pickupLocation = user?.hotelName || "The Grand Majestic Hotel";
+
+  const handleBackNavigation = () => {
+    if (step === 'tracking') {
+      setStep('payment');
+      return;
+    }
+
+    if (step === 'payment' || step === 'schedule') {
+      setStep('config');
+      return;
+    }
+
+    navigate(-1);
+  };
   
 
 
@@ -93,11 +108,20 @@ export const PassengerTrackingWeb = () => {
   return (
     <div className="min-h-screen bg-black p-4 font-sans text-white flex flex-col">
       <div className="max-w-md mx-auto w-full space-y-6 pt-8 flex-grow">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-black tracking-tight mb-2 uppercase italic">Tuxedo Concierge</h1>
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-bold">
-            <Navigation className="w-4 h-4 animate-pulse" />
-            {step === 'tracking' ? 'CHAUFFEUR EN ROUTE' : 'RIDE CONFIGURATION'}
+        <div className="mb-8">
+          <button
+            onClick={handleBackNavigation}
+            className="mb-4 text-base text-[#D4AF37] hover:text-[#B8962A] flex items-center gap-2 font-semibold"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+          <div className="text-center">
+            <h1 className="text-2xl font-black tracking-tight mb-2 uppercase italic">Tuxedo Concierge</h1>
+            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/30 text-[#D4AF37] text-sm font-bold">
+              <Navigation className="w-4 h-4 animate-pulse" />
+              {step === 'tracking' ? 'CHAUFFEUR EN ROUTE' : 'RIDE CONFIGURATION'}
+            </div>
           </div>
         </div>
 
@@ -314,17 +338,20 @@ export const PassengerTrackingWeb = () => {
                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter">Premium Amenities</span>
                   </div>
                   
-                  {isMember ? (
+                  {isMemberFromStorage ? (
                     <div className="flex flex-wrap justify-center gap-2">
                       {assignedDriver.amenities.map(a => (
                         <span key={a} className="text-[10px] font-bold bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-1 rounded border border-[#D4AF37]/20">{a}</span>
                       ))}
                     </div>
                   ) : (
-                    <button onClick={() => navigate('/membership')} className="flex items-center justify-center gap-2 w-full py-2 bg-white/5 rounded-lg border border-dashed border-white/20 group hover:border-[#D4AF37]/40 transition-colors">
+                    <div className="space-y-2">
+                      <p className="text-[9px] font-black text-gray-600 uppercase">Premium amenities locked</p>
+                      <button onClick={() => navigate('/membership-payment')} className="flex items-center justify-center gap-2 w-full py-2 bg-white/5 rounded-lg border border-dashed border-white/20 group hover:border-[#D4AF37]/40 transition-colors">
                       <Lock className="w-3 h-3 text-gray-600 group-hover:text-[#D4AF37]" />
-                      <span className="text-[9px] font-black text-gray-600 uppercase group-hover:text-[#D4AF37]">Unlock with Membership</span>
-                    </button>
+                      <span className="text-[9px] font-black text-gray-600 uppercase group-hover:text-[#D4AF37]">Buy Membership</span>
+                      </button>
+                    </div>
                   )}
                 </div>
                 
