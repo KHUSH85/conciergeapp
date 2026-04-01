@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import { 
   MapPin, Clock, Calendar, Car, Navigation, 
@@ -10,16 +10,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { Calendar as CalendarUI } from '../components/ui/calendar';
 import { format } from 'date-fns';
+import type { User as AppUser } from '../types';
 
 import { calculateFare, calculateCommission } from '../utils/pricing';
 
 export const PassengerTrackingWeb = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, setActiveRide } = useApp();
   
   const [step, setStep] = useState<'config' | 'schedule' | 'payment' | 'tracking'>('config');
-  const [bookingMode, setBookingMode] = useState<'instant' | 'scheduled'>('instant');
-  const [vehicleType, setVehicleType] = useState('stretch-limo');
   const [dropOffLocation, setDropOffLocation] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
@@ -34,9 +34,34 @@ export const PassengerTrackingWeb = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const state = location.state as {
+      fromMembershipPurchase?: boolean;
+      fromMembershipSkip?: boolean;
+      paymentMethod?: string;
+    } | null;
+    if (!state?.fromMembershipPurchase && !state?.fromMembershipSkip) return;
+
+    const selectedPaymentMethod = state.paymentMethod || 'Payment Method';
+    const membershipPurchased = Boolean(state.fromMembershipPurchase);
+    setPaymentMethod(selectedPaymentMethod);
+    setStep('tracking');
+    setHasPremiumAmenities(membershipPurchased);
+    setShowPromo(membershipPurchased);
+
+    setActiveRide(prev => ({
+      ...(prev || {} as any),
+      dropOffLocation,
+      paymentMethod: selectedPaymentMethod,
+      status: 'tracking',
+    }));
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, setActiveRide, dropOffLocation]);
+
   // Requirement 4.3 & 6.3: Detect Membership Status
   const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
-  const isMemberFromStorage = localStorage.getItem('isMember') === 'true';
+  const [hasPremiumAmenities, setHasPremiumAmenities] = useState<boolean>(isMember);
   const pickupLocation = user?.hotelName || "The Grand Majestic Hotel";
 
   const handleBackNavigation = () => {
@@ -72,15 +97,12 @@ export const PassengerTrackingWeb = () => {
       driverMoving: true
     }));
 
-    if (bookingMode === 'scheduled') {
-      setStep('schedule');
-    } else {
-      setStep('payment');
-    }
+    setStep('payment');
   };
 
   const handlePaymentSelection = (method: string) => {
     setPaymentMethod(method);
+    setShowPromo(false);
     
     // Update global state for data flow
     setActiveRide(prev => ({
@@ -90,8 +112,7 @@ export const PassengerTrackingWeb = () => {
       status: 'tracking',
     }));
 
-    setStep('tracking');
-    setTimeout(() => setShowPromo(true), 1000);
+    navigate('/membership', { state: { fromTrackRide: true, paymentMethod: method } });
   };
 
   const proceedToTracking = () => {
@@ -102,6 +123,7 @@ export const PassengerTrackingWeb = () => {
       paymentMethod: null,
       status: 'tracking',
     }));
+    setShowPromo(false);
     setStep('tracking');
   };
 
@@ -147,23 +169,6 @@ export const PassengerTrackingWeb = () => {
                       onChange={(e) => setDropOffLocation(e.target.value)}
                       className="w-full bg-black/50 border-2 border-[#D4AF37]/30 rounded-xl py-4 pl-12 pr-4 focus:border-[#D4AF37] outline-none font-bold text-white"
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => setBookingMode('instant')} className={`py-4 rounded-xl border-2 font-black uppercase text-xs transition-all ${bookingMode === 'instant' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-white/10 text-gray-500'}`}>
-                      <Clock className="w-4 h-4 mx-auto mb-1" /> Instant
-                    </button>
-                    <button onClick={() => setBookingMode('scheduled')} className={`py-4 rounded-xl border-2 font-black uppercase text-xs transition-all ${bookingMode === 'scheduled' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-white/10 text-gray-500'}`}>
-                      <Calendar className="w-4 h-4 mx-auto mb-1" /> Schedule
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {['stretch-limo', 'sedan-limo'].map((v) => (
-                      <button key={v} onClick={() => setVehicleType(v)} className={`py-4 rounded-xl border-2 font-black uppercase text-[10px] transition-all ${vehicleType === v ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-white/10 text-gray-500'}`}>
-                        <Car className="w-4 h-4 mx-auto mb-1" /> {v.replace('-', ' ')}
-                      </button>
-                    ))}
                   </div>
 
                   <GoldButton onClick={handleRequestChauffeur} className="w-full py-5 text-xl uppercase font-black" disabled={!dropOffLocation}>
@@ -338,7 +343,7 @@ export const PassengerTrackingWeb = () => {
                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter">Premium Amenities</span>
                   </div>
                   
-                  {isMemberFromStorage ? (
+                  {hasPremiumAmenities ? (
                     <div className="flex flex-wrap justify-center gap-2">
                       {assignedDriver.amenities.map(a => (
                         <span key={a} className="text-[10px] font-bold bg-[#D4AF37]/10 text-[#D4AF37] px-2 py-1 rounded border border-[#D4AF37]/20">{a}</span>
@@ -347,7 +352,14 @@ export const PassengerTrackingWeb = () => {
                   ) : (
                     <div className="space-y-2">
                       <p className="text-[9px] font-black text-gray-600 uppercase">Premium amenities locked</p>
-                      <button onClick={() => navigate('/membership-payment')} className="flex items-center justify-center gap-2 w-full py-2 bg-white/5 rounded-lg border border-dashed border-white/20 group hover:border-[#D4AF37]/40 transition-colors">
+                      <button
+                        onClick={() =>
+                          navigate('/membership', {
+                            state: { fromTrackRide: true, paymentMethod },
+                          })
+                        }
+                        className="flex items-center justify-center gap-2 w-full py-2 bg-white/5 rounded-lg border border-dashed border-white/20 group hover:border-[#D4AF37]/40 transition-colors"
+                      >
                       <Lock className="w-3 h-3 text-gray-600 group-hover:text-[#D4AF37]" />
                       <span className="text-[9px] font-black text-gray-600 uppercase group-hover:text-[#D4AF37]">Buy Membership</span>
                       </button>
@@ -369,7 +381,7 @@ export const PassengerTrackingWeb = () => {
         {/* Requirement: App Download Popup Trigger */}
         <AnimatePresence>
           {showAppPopup && (
-            <AppDownloadPopup onClose={() => setShowAppPopup(false)} />
+            <AppDownloadPopup user={user} onClose={() => setShowAppPopup(false)} />
           )}
         </AnimatePresence>
       </div>
@@ -419,7 +431,30 @@ export const PassengerTrackingWeb = () => {
 };
 
 // Requirement: App Download Popup (Real Modal Overlay)
-const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
+const AppDownloadPopup = ({ user, onClose }: { user: AppUser | null; onClose: () => void }) => {
+  const generateCouponCode = () => {
+    const token = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `TUX100-${token}`;
+  };
+
+  const handleDownloadApp = () => {
+    const couponData = {
+      code: generateCouponCode(),
+      amount: 100,
+      campaign: 'track-ride-download-popup',
+      linkedIdentity: {
+        phone: user?.phone || null,
+        email: user?.email || null,
+      },
+      status: 'pending_app_login',
+      issuedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem('pendingAppDownloadCoupon', JSON.stringify(couponData));
+    window.open('https://apps.apple.com', '_blank');
+    onClose();
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -440,15 +475,12 @@ const AppDownloadPopup = ({ onClose }: { onClose: () => void }) => {
           </div>
           
           <h3 className="text-xl font-bold text-white mb-6 leading-tight">
-            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your first ride
+            Download our app and get <span className="text-[#D4AF37]">$100 coupon free</span> on your next ride.
           </h3>
           
           <div className="space-y-3">
             <GoldButton 
-              onClick={() => {
-                window.open('https://apps.apple.com', '_blank');
-                onClose();
-              }} 
+              onClick={handleDownloadApp} 
               className="w-full py-4 text-base font-black uppercase"
             >
               Download App

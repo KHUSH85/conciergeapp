@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import { CreditCard, Apple, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 
 export const MembershipPaymentScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useApp();
 
   const handlePayment = () => {
@@ -23,7 +24,15 @@ export const MembershipPaymentScreen = () => {
       };
     });
     
-    // Once payment is "processed", navigate to the unlocked driver list
+    const state = location.state as { fromTrackRide?: boolean; paymentMethod?: string } | null;
+    if (state?.fromTrackRide) {
+      navigate('/track-ride', {
+        state: { fromMembershipPurchase: true, paymentMethod: state.paymentMethod || null },
+      });
+      return;
+    }
+
+    // Default flow outside track-ride
     navigate('/driver-list'); 
   };
 

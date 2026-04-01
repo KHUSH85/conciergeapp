@@ -13,14 +13,14 @@ import {
   Mail,
   ChevronRight,
   User,
-  MessageSquare,
-  Sparkles,
+  // MessageSquare, // used when Counter Request step is uncommented
 } from 'lucide-react';
 
 // Step indicator
 type Step = 'schedule' | 'chauffeur' | 'counter' | 'confirm';
 
-const STEPS: Step[] = ['schedule', 'chauffeur', 'counter', 'confirm'];
+// Counter Request step is temporarily disabled (UI preserved in comment block below).
+const STEPS: Step[] = ['schedule', 'chauffeur', 'confirm'];
 
 export const ScheduleBookingScreen = () => {
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export const ScheduleBookingScreen = () => {
 
   const canProceedSchedule = selectedDate && selectedTime;
   const canProceedChauffeur = chooseChauffeur !== null;
-  const canProceedCounter = hasCounterRequest !== null;
+  // const canProceedCounter = hasCounterRequest !== null; // when Counter Request step is re-enabled
   const canSubmit = contactMethod === 'phone' 
     ? guestPhone.length > 5 
     : (guestEmail && validateEmail(guestEmail) && !emailError);
@@ -280,7 +280,7 @@ export const ScheduleBookingScreen = () => {
                     state: {
                       bookingMode: 'scheduled',
                       returnTo: '/schedule-booking',
-                      scheduleStep: 'counter',
+                      scheduleStep: 'confirm',
                     },
                   });
                 } else {
@@ -296,7 +296,8 @@ export const ScheduleBookingScreen = () => {
           </GlassCard>
         )}
 
-        {/* ─── STEP 3: Counter Request ─── */}
+        {/* ─── STEP 3: Counter Request (commented out — re-add 'counter' to STEPS above to restore) ─── */}
+        {/*
         {step === 'counter' && (
           <GlassCard className="p-8">
             <motion.h2
@@ -353,13 +354,14 @@ export const ScheduleBookingScreen = () => {
             <GoldButton
               onClick={goNext}
               className="w-full py-5 text-xl font-black uppercase"
-              disabled={!canProceedCounter}
+              disabled={hasCounterRequest === null}
               icon={<ChevronRight className="w-5 h-5" />}
             >
               Continue
             </GoldButton>
           </GlassCard>
         )}
+        */}
 
         {/* ─── STEP 4: Booking Form / Confirm ─── */}
         {step === 'confirm' && (
@@ -472,7 +474,8 @@ export const ScheduleBookingScreen = () => {
               Send Chauffeur Request
             </GoldButton>
 
-            {/* Requirement: Counter Request Button (Only in scheduled flow) */}
+            {/* Requirement: Counter Request Button (Only in scheduled flow) — commented out with Counter step */}
+            {/*
             <GoldButton
               variant="secondary"
               onClick={() => setStep('counter')}
@@ -480,6 +483,7 @@ export const ScheduleBookingScreen = () => {
             >
               Counter Request
             </GoldButton>
+            */}
           </GlassCard>
         )}
       </div>

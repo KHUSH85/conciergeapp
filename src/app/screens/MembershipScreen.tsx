@@ -1,11 +1,14 @@
 /* src/app/screens/MembershipScreen.tsx */
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import { Sparkles, CheckCircle2, Crown, ArrowLeft, Zap } from 'lucide-react';
 
 export const MembershipScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const flowState = location.state as { fromTrackRide?: boolean; paymentMethod?: string } | null;
+  const cameFromTrackRide = flowState?.fromTrackRide === true;
 
   const benefits = [
     "Manual Chauffeur Selection",
@@ -46,9 +49,28 @@ export const MembershipScreen = () => {
             ))}
           </div>
 
-          <GoldButton onClick={() => navigate('/membership-payment')} className="w-full py-5 text-xl font-black uppercase">
+          <GoldButton
+            onClick={() => navigate('/membership-payment', { state: location.state })}
+            className="w-full py-5 text-xl font-black uppercase"
+          >
             Buy Membership
           </GoldButton>
+
+          {cameFromTrackRide && (
+            <button
+              onClick={() =>
+                navigate('/track-ride', {
+                  state: {
+                    fromMembershipSkip: true,
+                    paymentMethod: flowState?.paymentMethod || null,
+                  },
+                })
+              }
+              className="w-full mt-3 py-3 text-sm font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"
+            >
+              Continue Without Membership
+            </button>
+          )}
         </GlassCard>
       </div>
     </div>
