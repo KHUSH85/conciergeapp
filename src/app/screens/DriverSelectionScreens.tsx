@@ -1,6 +1,6 @@
 // Driver Selection Screens for TUXEDO CONCIERGE
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard, GoldButton } from '../components/GlassCard';
 import { DriverCard, DriverSwipeCard, Driver } from '../components/DriverCard';
@@ -131,9 +131,23 @@ export const DriverAssignmentModeScreen = () => {
   );
 };
 
+type TrackRideListState = {
+  fromTrackRide?: boolean;
+  paymentMethod?: string | null;
+};
+
+const trackRideListNavigateState = (flow: TrackRideListState | null, driver: Driver) => ({
+  fromMembershipPurchase: true,
+  paymentMethod: flow?.paymentMethod ?? null,
+  selectedDriver: driver,
+});
+
 // SCREEN 2: Driver List View
 export const DriverListScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const flow = location.state as TrackRideListState | null;
+  const returningToTrackRide = flow?.fromTrackRide === true;
   const { user } = useApp();
   const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
   const [drivers] = useState<Driver[]>(mockDrivers);
@@ -186,6 +200,11 @@ export const DriverListScreen = () => {
 
         <GlassCard className="p-8 mb-4">
           <motion.h2 className="text-2xl mb-3 text-white font-bold uppercase italic tracking-tight">Available Chauffeurs</motion.h2>
+          {returningToTrackRide && (
+            <p className="text-sm text-[#D4AF37] font-bold mb-2 uppercase tracking-wide">
+              Gold member — pick your chauffeur to continue to live tracking
+            </p>
+          )}
           <p className="text-base text-gray-400 font-medium mb-6">
             {filteredDrivers.length} driver{filteredDrivers.length !== 1 ? 's' : ''} found for your schedule
           </p>
@@ -255,13 +274,23 @@ export const DriverListScreen = () => {
 
                   <div className="mt-5 flex gap-3">
                     <button 
-                      onClick={() => navigate('/driver-profile', { state: { driver } })}
+                      onClick={() =>
+                        navigate('/driver-profile', {
+                          state: returningToTrackRide
+                            ? { driver, fromTrackRide: true, paymentMethod: flow?.paymentMethod ?? null }
+                            : { driver },
+                        })
+                      }
                       className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/10"
                     >
                       <Info className="w-4 h-4" /> View Profile
                     </button>
                     <GoldButton 
-                      onClick={() => navigate('/driver-confirmation', { state: { driver } })}
+                      onClick={() =>
+                        returningToTrackRide
+                          ? navigate('/track-ride', { state: trackRideListNavigateState(flow, driver) })
+                          : navigate('/driver-confirmation', { state: { driver } })
+                      }
                       className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest"
                     >
                       Select Chauffeur
@@ -280,10 +309,16 @@ export const DriverListScreen = () => {
 // SCREEN 3: Driver Profile Detail
 export const DriverProfileScreen = () => {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
   const { user } = useApp();
   const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
-  const location = (window.history.state && window.history.state.usr) || {};
-  const driver = location.driver || mockDrivers[0];
+  const state = routerLocation.state as {
+    driver?: Driver;
+    fromTrackRide?: boolean;
+    paymentMethod?: string | null;
+  } | null;
+  const driver = state?.driver ?? mockDrivers[0];
+  const returningToTrackRide = state?.fromTrackRide === true;
 
   return (
     <div className="min-h-screen p-4 bg-black">
@@ -348,7 +383,21 @@ export const DriverProfileScreen = () => {
                 </div>
               )}
               <p className="text-gray-400 text-xs leading-relaxed italic">"Professional chauffeur providing a seamless luxury experience. Certified for executive protection and concierge-level service."</p>
-              <GoldButton onClick={() => navigate('/driver-confirmation', { state: { driver } })} className="w-full py-5 text-lg uppercase font-black">Assign This Chauffeur</GoldButton>
+              <GoldButton
+                onClick={() =>
+                  returningToTrackRide
+                    ? navigate('/track-ride', {
+                        state: trackRideListNavigateState(
+                          { fromTrackRide: true, paymentMethod: state?.paymentMethod ?? null },
+                          driver
+                        ),
+                      })
+                    : navigate('/driver-confirmation', { state: { driver } })
+                }
+                className="w-full py-5 text-lg uppercase font-black"
+              >
+                Assign This Chauffeur
+              </GoldButton>
             </motion.div>
           </div>
         </GlassCard>

@@ -11,8 +11,40 @@ import { useApp } from '../context/AppContext';
 import { Calendar as CalendarUI } from '../components/ui/calendar';
 import { format } from 'date-fns';
 import type { User as AppUser } from '../types';
+import type { Driver } from '../components/DriverCard';
 
 import { calculateFare, calculateCommission } from '../utils/pricing';
+
+type TrackingDriverDisplay = {
+  name: string;
+  rating: string;
+  vehicle: string;
+  amenities: string[];
+};
+
+function driverToTrackingDisplay(driver: Driver): TrackingDriverDisplay {
+  const parts = driver.name.split(' ').filter(Boolean);
+  const shortName =
+    parts.length >= 2 ? `${parts[0]} ${parts[1].charAt(0)}.` : driver.name;
+  const tags: string[] = [];
+  if (driver.amenities.wifi) tags.push('WiFi');
+  if (driver.amenities.water) tags.push('Refreshments');
+  if (driver.amenities.music) tags.push('Premium Audio');
+  tags.push(driver.vehicle.interior);
+  return {
+    name: shortName,
+    rating: driver.rating.toFixed(1),
+    vehicle: `${driver.vehicle.color} ${driver.vehicle.model}`,
+    amenities: tags.slice(0, 4),
+  };
+}
+
+const DEFAULT_ASSIGNED: TrackingDriverDisplay = {
+  name: 'Michael S.',
+  rating: '4.9',
+  vehicle: 'Black S-Class',
+  amenities: ['WiFi', 'Refreshments', 'Leather Interior'],
+};
 
 export const PassengerTrackingWeb = () => {
   const navigate = useNavigate();
@@ -28,6 +60,12 @@ export const PassengerTrackingWeb = () => {
   const [showPromo, setShowPromo] = useState(false);
   const [showAppPopup, setShowAppPopup] = useState(false);
 
+  const isMemberFlag = localStorage.getItem('isMember') === 'true';
+  const [hasPremiumAmenities, setHasPremiumAmenities] = useState<boolean>(
+    isMemberFlag || user?.isMember === true
+  );
+  const [assignedDriver, setAssignedDriver] = useState<TrackingDriverDisplay>(DEFAULT_ASSIGNED);
+
   // Requirement: App Download Popup (Non-blocking)
   useEffect(() => {
     const timer = setTimeout(() => setShowAppPopup(true), 5000);
@@ -39,6 +77,7 @@ export const PassengerTrackingWeb = () => {
       fromMembershipPurchase?: boolean;
       fromMembershipSkip?: boolean;
       paymentMethod?: string;
+      selectedDriver?: Driver;
     } | null;
     if (!state?.fromMembershipPurchase && !state?.fromMembershipSkip) return;
 
@@ -48,6 +87,12 @@ export const PassengerTrackingWeb = () => {
     setStep('tracking');
     setHasPremiumAmenities(membershipPurchased);
     setShowPromo(membershipPurchased);
+
+    if (membershipPurchased && state.selectedDriver) {
+      setAssignedDriver(driverToTrackingDisplay(state.selectedDriver));
+    } else {
+      setAssignedDriver(DEFAULT_ASSIGNED);
+    }
 
     setActiveRide(prev => ({
       ...(prev || {} as any),
@@ -60,8 +105,7 @@ export const PassengerTrackingWeb = () => {
   }, [location.state, location.pathname, navigate, setActiveRide, dropOffLocation]);
 
   // Requirement 4.3 & 6.3: Detect Membership Status
-  const isMember = localStorage.getItem('isMember') === 'true' || user?.isMember === true;
-  const [hasPremiumAmenities, setHasPremiumAmenities] = useState<boolean>(isMember);
+  const isMember = isMemberFlag || user?.isMember === true;
   const pickupLocation = user?.hotelName || "The Grand Majestic Hotel";
 
   const handleBackNavigation = () => {
@@ -79,14 +123,6 @@ export const PassengerTrackingWeb = () => {
   };
   
 
-
-  // Requirement 6.5: Driver last names hidden per privacy rules
-  const assignedDriver = {
-    name: "Michael S.", 
-    rating: "4.9",
-    vehicle: "Black S-Class",
-    amenities: ["WiFi", "Refreshments", "Leather Interior"]
-  };
 
   const handleRequestChauffeur = () => {
     // Requirement: Driver movement starts immediately after dropOffLocation is set

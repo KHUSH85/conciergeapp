@@ -26,8 +26,12 @@ export const MembershipPaymentScreen = () => {
     
     const state = location.state as { fromTrackRide?: boolean; paymentMethod?: string } | null;
     if (state?.fromTrackRide) {
-      navigate('/track-ride', {
-        state: { fromMembershipPurchase: true, paymentMethod: state.paymentMethod || null },
+      // After membership payment, user picks their chauffeur on /driver-list, then returns to tracking.
+      navigate('/driver-list', {
+        state: {
+          fromTrackRide: true,
+          paymentMethod: state.paymentMethod || null,
+        },
       });
       return;
     }
