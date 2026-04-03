@@ -1,1 +1,0 @@
-export { KYCRequiredScreen } from './AllScreens';

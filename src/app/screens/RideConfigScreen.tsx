@@ -1,1 +1,0 @@
-export { RideConfigScreen } from './AllScreens';
