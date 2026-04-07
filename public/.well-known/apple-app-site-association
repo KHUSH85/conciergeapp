@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "YOURTEAMID.com.tuxedo.passenger",
+        "paths": ["/track-ride", "/track-ride/*"]
+      }
+    ]
+  }
+}
