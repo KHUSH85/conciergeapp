@@ -28,7 +28,8 @@
         "NSCameraUsageDescription": "This app needs access to your camera to take photos.",
         "NSMicrophoneUsageDescription": "This app needs access to your microphone to record voice messages.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "bundleIdentifier": "com.jashom.tuxedomobile"
     },
     "android": {
       "adaptiveIcon": {
