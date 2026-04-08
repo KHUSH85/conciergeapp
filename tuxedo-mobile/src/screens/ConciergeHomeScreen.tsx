@@ -59,7 +59,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
             <View style={styles.btnInner}>
               <Calendar color={GOLD} size={18} />
               <View>
-                <Text style={[styles.ctaBtnText, { color: GOLD }]}>Schedule a Ride</Text>
+                <Text style={[styles.ctaBtnText, { color: GOLD }]}>Reserve a Ride</Text>
                 <Text style={styles.scheduleSubtext}>Schedule Reservation</Text>
               </View>
             </View>
