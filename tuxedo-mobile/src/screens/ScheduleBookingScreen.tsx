@@ -8,8 +8,8 @@ import { useApp } from '../context/AppContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
 
 const GOLD = '#D4AF37';
-type Step = 'schedule' | 'chauffeur' | 'confirm';
-const STEPS: Step[] = ['schedule', 'chauffeur', 'confirm'];
+type Step = 'guest' | 'schedule' | 'chauffeur' | 'confirm';
+const STEPS: Step[] = ['guest', 'schedule', 'chauffeur', 'confirm'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
@@ -69,7 +69,7 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
 
 export const ScheduleBookingScreen = ({ navigation }: any) => {
   const { user } = useApp();
-  const [step, setStep] = useState<Step>('schedule');
+  const [step, setStep] = useState<Step>('guest');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDateObj, setSelectedDateObj] = useState<Date | null>(null);
@@ -129,7 +129,44 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
           ))}
         </View>
 
-        {/* Step 1: Date & Time */}
+        {/* Step 1: Guest Info */}
+        {step === 'guest' && (
+          <GlassCard style={styles.card}>
+            <Text style={styles.title}>Schedule a Ride</Text>
+            <Text style={styles.subtitle}>* Tracking link will be sent automatically to the guest.</Text>
+
+            <MotiView key={contactMethod} from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: 'timing', duration: 300 }}>
+              <View style={styles.inputWrap}>
+                {contactMethod === 'phone' ? <Phone color={GOLD} size={20} style={styles.inputIcon} /> : <Mail color={GOLD} size={20} style={styles.inputIcon} />}
+                <TextInput
+                  style={styles.input}
+                  placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
+                  placeholderTextColor="#6b7280"
+                  value={contactMethod === 'phone' ? guestPhone : guestEmail}
+                  onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
+                  keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
+                  autoCapitalize="none"
+                />
+              </View>
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            </MotiView>
+
+            <TouchableOpacity onPress={() => setContactMethod(contactMethod === 'phone' ? 'email' : 'phone')} style={styles.switchBtn}>
+              <Text style={styles.switchText}>
+                {contactMethod === 'phone' ? "Don't have a phone? Use Email instead" : 'Use Phone Number instead'}
+              </Text>
+            </TouchableOpacity>
+
+            <GoldButton onPress={goNext} disabled={!canSubmit} style={styles.btn}>
+              <View style={styles.btnInner}>
+                <Text style={styles.btnText}>Send Ride Request</Text>
+                <ChevronRight color="#000" size={18} />
+              </View>
+            </GoldButton>
+          </GlassCard>
+        )}
+
+        {/* Step 2: Date & Time */}
         {step === 'schedule' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Reserve a Ride</Text>
@@ -178,7 +215,7 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
           </GlassCard>
         )}
 
-        {/* Step 2: Chauffeur */}
+        {/* Step 3: Chauffeur */}
         {step === 'chauffeur' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Choose Chauffeur</Text>
@@ -214,41 +251,19 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
           </GlassCard>
         )}
 
-        {/* Step 3: Guest Info */}
+        {/* Step 4: Confirm */}
         {step === 'confirm' && (
           <GlassCard style={styles.card}>
-            <Text style={styles.title}>Guest Information</Text>
-            <Text style={styles.subtitle}>* Tracking link will be sent automatically to the guest.</Text>
+            <Text style={styles.title}>Confirm Booking</Text>
+            <Text style={styles.subtitle}>Review and confirm the scheduled ride.</Text>
 
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>Scheduled Ride</Text>
               <Text style={styles.summaryValue}>{selectedDate} at {selectedTime}</Text>
             </View>
 
-            <MotiView key={contactMethod} from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: 'timing', duration: 300 }}>
-              <View style={styles.inputWrap}>
-                {contactMethod === 'phone' ? <Phone color={GOLD} size={20} style={styles.inputIcon} /> : <Mail color={GOLD} size={20} style={styles.inputIcon} />}
-                <TextInput
-                  style={styles.input}
-                  placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
-                  placeholderTextColor="#6b7280"
-                  value={contactMethod === 'phone' ? guestPhone : guestEmail}
-                  onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
-                  keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
-                  autoCapitalize="none"
-                />
-              </View>
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </MotiView>
-
-            <TouchableOpacity onPress={() => setContactMethod(contactMethod === 'phone' ? 'email' : 'phone')} style={styles.switchBtn}>
-              <Text style={styles.switchText}>
-                {contactMethod === 'phone' ? "Don't have a phone? Use Email instead" : 'Use Phone Number instead'}
-              </Text>
-            </TouchableOpacity>
-
-            <GoldButton onPress={handleRequest} disabled={!canSubmit} style={styles.btn}>
-              <Text style={styles.btnText}>Send Chauffeur Request</Text>
+            <GoldButton onPress={handleRequest} style={styles.btn}>
+              <Text style={styles.btnText}>Confirm Booking</Text>
             </GoldButton>
           </GlassCard>
         )}
