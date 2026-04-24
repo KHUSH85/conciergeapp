@@ -9,7 +9,7 @@ import { useApp } from '../context/AppContext';
 const GOLD = '#D4AF37';
 
 // Base URL of the deployed Vercel website
-const WEBSITE_BASE_URL = 'https://conciergeapptuxedo.vercel.app';
+const WEBSITE_BASE_URL = 'https://passenger-webapp.vercel.app';
 
 function generateRideToken(): string {
   return Math.random().toString(36).slice(2, 10).toUpperCase();
