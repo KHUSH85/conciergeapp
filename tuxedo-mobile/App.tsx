@@ -1,75 +1,65 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
-import { AppProvider } from './src/context/AppContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AppProvider, useApp } from './src/context/AppContext';
+import * as SplashScreen from 'expo-splash-screen';
+
+import { SplashScreenComponent } from './src/screens/SplashScreen';
+import { AuthNavigator, MainNavigator } from './src/navigation/RootNavigator';
 
 enableScreens();
+SplashScreen.preventAutoHideAsync();
 
-// Screens
-import { LoginScreen } from './src/screens/LoginScreen';
-import { ConciergeHomeScreen } from './src/screens/ConciergeHomeScreen';
-import { GuestDetailsScreen } from './src/screens/GuestDetailsScreen';
-import { WaitingForPaymentScreen } from './src/screens/WaitingForPaymentScreen';
-import { DriverMatchingScreen } from './src/screens/DriverMatchingScreen';
-import { DriverETAScreen } from './src/screens/DriverETAScreen';
-import { ActiveRideScreen } from './src/screens/ActiveRideScreen';
-import { RideCompletionScreen } from './src/screens/RideCompletionScreen';
-import { ProfileScreen } from './src/screens/ProfileScreen';
-import { CommissionWalletScreen } from './src/screens/CommissionWalletScreen';
-import { RideHistoryScreen } from './src/screens/RideHistoryScreen';
-import { ScheduleBookingScreen } from './src/screens/ScheduleBookingScreen';
-import {
-  DriverAssignmentModeScreen,
-  DriverListScreen,
-  DriverProfileScreen,
-  DriverSwipeScreen,
-} from './src/screens/DriverSelectionScreens';
-import { DriverConfirmationScreen } from './src/screens/DriverConfirmationScreen';
-import { MembershipScreen, MembershipPaymentScreen } from './src/screens/MembershipScreens';
-import { TrackRideScreen } from './src/screens/TrackRideScreen';
-
-const Stack = createNativeStackNavigator();
+// Inner component so it can access AppContext via useApp
+function AppNavigator() {
+  const { user } = useApp();
+  // key forces NavigationContainer to fully remount when auth state changes,
+  // preventing the internal REPLACE {name:"Home"} dispatch on the wrong navigator.
+  return (
+    <NavigationContainer key={user ? 'main' : 'auth'}>
+      <StatusBar style="light" />
+      {user ? <MainNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
+  const [appReady, setAppReady] = useState(false);
+  const [showJsSplash, setShowJsSplash] = useState(true);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appReady) await SplashScreen.hideAsync();
+  }, [appReady]);
+
+  useEffect(() => {
+    setAppReady(true);
+  }, []);
+
+  const handleSplashFinish = useCallback(() => {
+    setShowJsSplash(false);
+  }, []);
+
+  if (!appReady) return null;
+
+  if (showJsSplash) {
+    return (
+      <SafeAreaProvider onLayout={onLayoutRootView}>
+        <StatusBar style="light" />
+        <SplashScreenComponent onFinish={handleSplashFinish} />
+      </SafeAreaProvider>
+    );
+  }
+
   return (
-    <SafeAreaProvider>
-      <AppProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-        <Stack.Navigator
-          initialRouteName="Login"
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#000000' },
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Home" component={ConciergeHomeScreen} />
-          <Stack.Screen name="GuestDetails" component={GuestDetailsScreen} />
-          <Stack.Screen name="ScheduleBooking" component={ScheduleBookingScreen} />
-          <Stack.Screen name="WaitingForPayment" component={WaitingForPaymentScreen} />
-          <Stack.Screen name="DriverMatching" component={DriverMatchingScreen} />
-          <Stack.Screen name="DriverETA" component={DriverETAScreen} />
-          <Stack.Screen name="ActiveRide" component={ActiveRideScreen} />
-          <Stack.Screen name="RideCompletion" component={RideCompletionScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="CommissionWallet" component={CommissionWalletScreen} />
-          <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
-          <Stack.Screen name="DriverAssignmentMode" component={DriverAssignmentModeScreen} />
-          <Stack.Screen name="DriverList" component={DriverListScreen} />
-          <Stack.Screen name="DriverProfile" component={DriverProfileScreen} />
-          <Stack.Screen name="DriverSwipe" component={DriverSwipeScreen} />
-          <Stack.Screen name="DriverConfirmation" component={DriverConfirmationScreen} />
-          <Stack.Screen name="Membership" component={MembershipScreen} />
-          <Stack.Screen name="MembershipPayment" component={MembershipPaymentScreen} />
-          <Stack.Screen name="TrackRide" component={TrackRideScreen} />
-        </Stack.Navigator>
-        </NavigationContainer>
-      </AppProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppProvider>
+          <AppNavigator />
+        </AppProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

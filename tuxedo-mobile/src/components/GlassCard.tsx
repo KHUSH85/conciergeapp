@@ -24,9 +24,9 @@ export const GlassCard = ({ children, animate = true, style }: GlassCardProps) =
 
   return (
     <MotiView
-      from={{ opacity: 0, translateY: 20 }}
+      from={{ opacity: 0, translateY: 12 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: 'timing', duration: 400 }}
+      transition={{ type: 'timing', duration: 240 }}
       style={base}
     >
       {children}

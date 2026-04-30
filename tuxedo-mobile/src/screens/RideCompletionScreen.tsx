@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { Star, Check } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import { Star, Check, ThumbsUp } from 'lucide-react-native';
+import { AppCard } from '../components/AppCard';
+import { AppButton } from '../components/AppButton';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
+import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
 import { calculateFare } from '../utils/pricing';
 
@@ -11,79 +14,183 @@ const GOLD = '#D4AF37';
 
 export const RideCompletionScreen = ({ navigation, route }: any) => {
   const { activeRide } = useApp();
-  const { paymentType, estimatedFare } = route.params || {};
+  const { paymentType, estimatedFare, driver } = route.params || {};
   const [rating, setRating] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const { light, success } = useHaptics();
+  const delays = useStaggerAnimation();
 
   const fare = activeRide?.fare || estimatedFare || calculateFare(paymentType || 'card');
+  const driverName = driver?.name || 'Your Chauffeur';
+
+  const handleRate = async (star: number) => {
+    await light();
+    setRating(star);
+  };
+
+  const handleDone = async () => {
+    await success();
+    setSubmitted(true);
+    setTimeout(() => navigation.navigate('ConciergeHome'), 300);
+  };
 
   return (
-    <ScreenShell centerContent>
-      <GlassCard style={styles.card}>
-        {/* Success icon */}
-        <MotiView from={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }} style={styles.successWrap}>
-          <View style={styles.successCircle}>
-            <Check color="#000" size={40} />
-          </View>
-        </MotiView>
-
-        <Text style={styles.title}>Ride Complete</Text>
-
-        {/* Fare breakdown */}
-        <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 500, delay: 200 }}>
-          <View style={styles.fareBox}>
-            <View style={styles.fareRow}>
-              <Text style={styles.fareLabel}>Total Fare</Text>
-              <Text style={styles.fareValue}>${fare.toFixed(2)}</Text>
-            </View>
-          </View>
-        </MotiView>
-
-        {/* Journey confirmed badge */}
-        <View style={styles.confirmedBox}>
-          <Text style={styles.confirmedTitle}>Journey Confirmed</Text>
-          <Text style={styles.confirmedSub}>Driver payment processed successfully</Text>
+    <AppScreen centerContent noTopPad>
+      {/* ── Success badge ── */}
+      <MotiView
+        from={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 220, damping: 16, delay: 60 }}
+        style={styles.successWrap}
+      >
+        <View style={styles.successCircle}>
+          <Check color="#000" size={36} strokeWidth={3} />
         </View>
+      </MotiView>
 
-        {/* Star rating */}
-        <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ type: 'timing', duration: 500, delay: 500 }}>
-          <Text style={styles.rateLabel}>Rate Driver</Text>
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.header }}
+        style={styles.titleWrap}
+      >
+        <Text style={styles.title}>Ride Complete</Text>
+        <Text style={styles.subtitle}>Thank you, {driverName} delivered safely.</Text>
+      </MotiView>
+
+      {/* ── Fare summary ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.content }}
+        style={styles.cardWrap}
+      >
+        <AppCard variant="gold" style={styles.fareCard}>
+          <View style={styles.fareRow}>
+            <Text style={styles.fareLabel}>Total Fare</Text>
+            <Text style={styles.fareValue}>${fare.toFixed(2)}</Text>
+          </View>
+          <View style={styles.fareDivider} />
+          <View style={styles.fareRow}>
+            <Text style={styles.fareLabel}>Payment</Text>
+            <Text style={styles.fareMethod}>
+              {paymentType === 'cash' ? 'Cash' : 'Card'}
+            </Text>
+          </View>
+        </AppCard>
+      </MotiView>
+
+      {/* ── Rating ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.item(0) }}
+        style={styles.cardWrap}
+      >
+        <AppCard style={styles.ratingCard}>
+          <View style={styles.ratingHeader}>
+            <ThumbsUp color={GOLD} size={16} />
+            <Text style={styles.ratingTitle}>Rate your chauffeur</Text>
+          </View>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map(star => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                <Star
-                  color={GOLD}
-                  size={38}
-                  fill={star <= rating ? GOLD : 'transparent'}
-                  style={styles.star}
-                />
+              <TouchableOpacity
+                key={star}
+                onPress={() => handleRate(star)}
+                style={styles.starBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Rate ${star} stars`}
+              >
+                <MotiView
+                  animate={{ scale: star <= rating ? 1.15 : 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 14 }}
+                >
+                  <Star
+                    color={GOLD}
+                    size={36}
+                    fill={star <= rating ? GOLD : 'transparent'}
+                  />
+                </MotiView>
               </TouchableOpacity>
             ))}
           </View>
-        </MotiView>
+          {rating > 0 && (
+            <MotiView
+              from={{ opacity: 0, translateY: 4 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'timing', duration: 200 }}
+            >
+              <Text style={styles.ratingFeedback}>
+                {rating === 5 ? 'Excellent!' : rating >= 3 ? 'Good ride' : 'Thanks for the feedback'}
+              </Text>
+            </MotiView>
+          )}
+        </AppCard>
+      </MotiView>
 
-        <GoldButton onPress={() => navigation.navigate('Home')} style={styles.btn}>
-          <Text style={styles.btnText}>Done</Text>
-        </GoldButton>
-      </GlassCard>
-    </ScreenShell>
+      {/* ── CTA ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: delays.cta }}
+        style={styles.ctaWrap}
+      >
+        <AppButton
+          label="Back to Dashboard"
+          onPress={handleDone}
+          haptic="success"
+          success={submitted}
+          style={styles.ctaBtn}
+        />
+      </MotiView>
+    </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  card: { padding: 28 },
   successWrap: { alignItems: 'center', marginBottom: 16 },
-  successCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: GOLD, justifyContent: 'center', alignItems: 'center', shadowColor: GOLD, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 },
-  title: { fontSize: 26, color: '#fff', fontWeight: '900', textAlign: 'center', marginBottom: 20 },
-  fareBox: { backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.3)', borderRadius: 16, padding: 20, marginBottom: 16 },
-  fareRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  fareLabel: { color: '#9ca3af', fontSize: 14, fontWeight: '500' },
-  fareValue: { color: '#fff', fontSize: 22, fontWeight: '900' },
-  confirmedBox: { backgroundColor: 'rgba(212,175,55,0.1)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.4)', borderRadius: 12, padding: 16, marginBottom: 24 },
-  confirmedTitle: { color: GOLD, fontWeight: '900', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
-  confirmedSub: { color: '#9ca3af', fontSize: 11, fontWeight: '500', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  rateLabel: { color: '#fff', fontWeight: '700', fontSize: 15, textAlign: 'center', marginBottom: 12 },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
-  star: { marginHorizontal: 4 },
-  btn: { width: '100%', paddingVertical: 16 },
-  btnText: { color: '#000', fontWeight: '900', fontSize: 15, textAlign: 'center' },
+  successCircle: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: GOLD,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  titleWrap: { alignItems: 'center', marginBottom: 24 },
+  title:    { fontSize: 26, color: '#fff', fontWeight: '800', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#9ca3af', fontWeight: '500', textAlign: 'center' },
+  cardWrap: { width: '100%', marginBottom: 12 },
+  fareCard: { padding: 20 },
+  fareRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  fareLabel:  { color: '#9ca3af', fontSize: 13, fontWeight: '500' },
+  fareValue:  { color: '#fff', fontSize: 24, fontWeight: '800' },
+  fareMethod: { color: '#d1d5db', fontSize: 14, fontWeight: '600' },
+  fareDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 14,
+  },
+  ratingCard: { padding: 20 },
+  ratingHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16,
+  },
+  ratingTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  starsRow: {
+    flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 8,
+  },
+  starBtn: {
+    padding: 4, minWidth: 44, minHeight: 44,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ratingFeedback: {
+    textAlign: 'center', color: GOLD,
+    fontSize: 13, fontWeight: '600',
+  },
+  ctaWrap: { width: '100%', marginTop: 8 },
+  ctaBtn: { width: '100%' },
 });

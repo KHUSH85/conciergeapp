@@ -1,73 +1,173 @@
-import React from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { Car, ArrowLeft } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import { Car, Send, RefreshCw, ArrowLeft } from 'lucide-react-native';
+import { AppCard } from '../components/AppCard';
+import { AppButton } from '../components/AppButton';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
+import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 
 const GOLD = '#D4AF37';
 
-export const WaitingForPaymentScreen = ({ navigation }: any) => (
-  <ScreenShell centerContent>
-    <GlassCard style={styles.card}>
-      {/* Animated loader */}
-      <View style={styles.loaderWrap}>
-        <MotiView
-          from={{ rotate: '0deg' }} animate={{ rotate: '360deg' }}
-          transition={{ type: 'timing', duration: 1200, loop: true }}
-          style={styles.spinner}
+export const WaitingForPaymentScreen = ({ navigation }: any) => {
+  const { light } = useHaptics();
+  const delays = useStaggerAnimation();
+  const [resent, setResent] = useState(false);
+
+  const handleResend = async () => {
+    await light();
+    setResent(true);
+    setTimeout(() => setResent(false), 3000);
+  };
+
+  return (
+    <AppScreen centerContent noTopPad>
+      {/* ── Spinner card ── */}
+      <MotiView
+        from={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'timing', duration: 260, delay: delays.header }}
+        style={{ width: '100%' }}
+      >
+        <AppCard variant="gold" style={styles.heroCard}>
+          {/* Animated spinner + car */}
+          <View style={styles.spinnerWrap}>
+            <MotiView
+              from={{ rotate: '0deg' }}
+              animate={{ rotate: '360deg' }}
+              transition={{ type: 'timing', duration: 1400, loop: true }}
+              style={styles.spinner}
+            />
+            <View style={styles.carOverlay}>
+              <MotiView
+                from={{ opacity: 0.5 }}
+                animate={{ opacity: 1 }}
+                transition={{ type: 'timing', duration: 1800, loop: true }}
+              >
+                <Car color={GOLD} size={24} />
+              </MotiView>
+            </View>
+          </View>
+
+          <Text style={styles.title}>Request Sent</Text>
+          <Text style={styles.subtitle}>
+            Tracking link delivered to guest.{'\n'}
+            Waiting for destination and payment.
+          </Text>
+
+          {/* Status pill */}
+          <View style={styles.statusPill}>
+            <MotiView
+              from={{ opacity: 0.3 }}
+              animate={{ opacity: 1 }}
+              transition={{ type: 'timing', duration: 900, loop: true }}
+              style={styles.statusDot}
+            />
+            <Text style={styles.statusText}>Chauffeur Radar Active</Text>
+          </View>
+        </AppCard>
+      </MotiView>
+
+      {/* ── Actions ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.content }}
+        style={styles.actionsWrap}
+      >
+        <AppButton
+          label="Return to Dashboard"
+          onPress={() => navigation.navigate('ConciergeHome')}
+          style={styles.primaryBtn}
         />
-        <View style={styles.carOverlay}>
-          <MotiView from={{ opacity: 0.4 }} animate={{ opacity: 1 }} transition={{ type: 'timing', duration: 2000, loop: true }}>
-            <Car color={GOLD} size={22} />
-          </MotiView>
-        </View>
-      </View>
 
-      <Text style={styles.title}>Request Sent</Text>
-      <Text style={styles.subtitle}>
-        The automated tracking link has been sent to the guest.{'\n'}
-        Waiting for destination entry and payment.
-      </Text>
+        <TouchableOpacity
+          onPress={handleResend}
+          style={styles.resendBtn}
+          accessibilityRole="button"
+          activeOpacity={0.7}
+        >
+          <RefreshCw color={resent ? '#22c55e' : GOLD} size={15} />
+          <Text style={[styles.resendText, resent && styles.resendTextSent]}>
+            {resent ? 'Link Resent!' : 'Resend Tracking Link'}
+          </Text>
+        </TouchableOpacity>
 
-      <View style={styles.statusBadge}>
-        <Text style={styles.statusText}>Status: Chauffeur Radar Active</Text>
-      </View>
+        <TouchableOpacity
+          onPress={async () => { await light(); navigation.goBack(); }}
+          style={styles.backRow}
+          accessibilityRole="button"
+        >
+          <ArrowLeft color="#4b5563" size={14} />
+          <Text style={styles.backText}>Back to Guest Details</Text>
+        </TouchableOpacity>
+      </MotiView>
 
-      <GoldButton onPress={() => navigation.navigate('Home')} style={styles.btn}>
-        <Text style={styles.btnText}>Return to Dashboard</Text>
-      </GoldButton>
-
-      <TouchableOpacity style={styles.resendBtn}>
-        <Text style={styles.resendText}>Resend Tracking SMS</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backRow}>
-        <ArrowLeft color="#6b7280" size={14} />
-        <Text style={styles.backText}>Back</Text>
-      </TouchableOpacity>
-    </GlassCard>
-
-    <Text style={styles.footer}>
-      Concierge will be notified once the passenger{'\n'}completes the secure payment flow.
-    </Text>
-  </ScreenShell>
-);
+      {/* ── Footer note ── */}
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ type: 'timing', duration: 260, delay: delays.cta }}
+      >
+        <Text style={styles.footer}>
+          You'll be notified once the passenger completes payment.
+        </Text>
+      </MotiView>
+    </AppScreen>
+  );
+};
 
 const styles = StyleSheet.create({
-  card: { padding: 28, alignItems: 'center', width: '100%', maxWidth: 420, alignSelf: 'center' },
-  loaderWrap: { width: 64, height: 64, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
-  spinner: { position: 'absolute', width: 64, height: 64, borderRadius: 32, borderWidth: 3, borderColor: GOLD, borderTopColor: 'transparent' },
+  heroCard: { padding: 28, alignItems: 'center', marginBottom: 20 },
+  spinnerWrap: {
+    width: 72, height: 72,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 24,
+  },
+  spinner: {
+    position: 'absolute',
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2.5,
+    borderColor: GOLD,
+    borderTopColor: 'transparent',
+  },
   carOverlay: { position: 'absolute' },
-  title: { fontSize: 22, color: '#fff', fontWeight: '900', textTransform: 'uppercase', fontStyle: 'italic', marginBottom: 12, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 22, fontWeight: '500', marginBottom: 20 },
-  statusBadge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 20 },
-  statusText: { color: GOLD, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  btn: { width: '100%', paddingVertical: 16, marginBottom: 12 },
-  btnText: { color: '#000', fontWeight: '900', fontSize: 14, textAlign: 'center', textTransform: 'uppercase' },
-  resendBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', marginBottom: 12 },
-  resendText: { color: '#fff', fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  backText: { color: '#6b7280', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  footer: { marginTop: 24, color: '#4b5563', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center', letterSpacing: 0.5, lineHeight: 16 },
+  title: {
+    fontSize: 22, color: '#fff', fontWeight: '800',
+    marginBottom: 10, textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14, color: '#9ca3af', fontWeight: '500',
+    textAlign: 'center', lineHeight: 22, marginBottom: 20,
+  },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: 'rgba(212,175,55,0.08)',
+    borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)',
+    borderRadius: 50, paddingHorizontal: 14, paddingVertical: 7,
+  },
+  statusDot: {
+    width: 7, height: 7, borderRadius: 4, backgroundColor: GOLD,
+  },
+  statusText: { color: GOLD, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  actionsWrap: { width: '100%', gap: 10, marginBottom: 20 },
+  primaryBtn: { width: '100%' },
+  resendBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, minHeight: 48, borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)',
+    backgroundColor: 'rgba(212,175,55,0.05)',
+  },
+  resendText:     { color: GOLD, fontSize: 14, fontWeight: '600' },
+  resendTextSent: { color: '#22c55e' },
+  backRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, minHeight: 44,
+  },
+  backText: { color: '#4b5563', fontSize: 13, fontWeight: '500' },
+  footer: {
+    color: '#374151', fontSize: 11, fontWeight: '500',
+    textAlign: 'center', lineHeight: 18,
+  },
 });

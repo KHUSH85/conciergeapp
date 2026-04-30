@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Share, Clipboard } from 'react-native';
+﻿import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Share } from 'react-native';
 import { MotiView } from 'moti';
-import { Phone, Mail, ArrowLeft, Link, Copy, CheckCircle2 } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import { Phone, Mail, Link, Copy, CheckCircle2 } from 'lucide-react-native';
+import { Clipboard } from 'react-native';
+import { AppCard } from '../components/AppCard';
+import { AppButton } from '../components/AppButton';
+import { AppInput } from '../components/AppInput';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
 import { useApp } from '../context/AppContext';
 
-const GOLD = '#D4AF37';
-
-// Base URL of the deployed Vercel website
+const GOLD       = '#D4AF37';
+const GOLD_FAINT = 'rgba(212,175,55,0.08)';
+const GOLD_DIM   = 'rgba(212,175,55,0.25)';
 const WEBSITE_BASE_URL = 'https://passenger-webapp.vercel.app';
 
 function generateRideToken(): string {
@@ -16,54 +20,55 @@ function generateRideToken(): string {
 }
 
 function buildPassengerLink(pickup: string): string {
-  const token = generateRideToken();
+  const token  = generateRideToken();
   const params = new URLSearchParams({ token, pickup });
   return `${WEBSITE_BASE_URL}/track-ride?${params.toString()}`;
 }
 
 export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const { user } = useApp();
-  const [guestPhone, setGuestPhone] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const { light, medium } = useHaptics();
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const [guestPhone,     setGuestPhone]     = useState('');
+  const [guestEmail,     setGuestEmail]     = useState('');
+  const [emailError,     setEmailError]     = useState('');
+  const [contactMethod,  setContactMethod]  = useState<'phone' | 'email'>('phone');
+  const [generatedLink,  setGeneratedLink]  = useState('');
+  const [copied,         setCopied]         = useState(false);
+
+  const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
   const handleEmailChange = (val: string) => {
     setGuestEmail(val);
-    setEmailError(val && !validateEmail(val) ? 'Please enter a valid email address' : '');
+    setEmailError(val && !validateEmail(val) ? 'Enter a valid email address' : '');
   };
 
   const canSubmit = contactMethod === 'phone'
     ? guestPhone.length > 5
-    : (guestEmail && validateEmail(guestEmail) && !emailError);
+    : guestEmail.length > 0 && validateEmail(guestEmail) && !emailError;
 
   const pickupLocation = route.params?.pickupLocation || user?.hotelName || 'The Grand Majestic Hotel';
 
-  const handleRequest = () => {
+  const handleRequest = async () => {
+    await medium();
     const link = buildPassengerLink(pickupLocation);
-    setGeneratedLink(link);
     navigation.navigate('WaitingForPayment', {
-      guestPhone: contactMethod === 'phone' ? guestPhone : '',
-      guestEmail: contactMethod === 'email' ? guestEmail : '',
-      bookingMode: 'instant',
+      guestPhone:    contactMethod === 'phone' ? guestPhone : '',
+      guestEmail:    contactMethod === 'email' ? guestEmail : '',
+      bookingMode:   'instant',
       pickupLocation,
       passengerLink: link,
     });
   };
 
   const handleGenerateLink = () => {
-    const link = buildPassengerLink(pickupLocation);
-    setGeneratedLink(link);
+    setGeneratedLink(buildPassengerLink(pickupLocation));
   };
 
   const handleCopy = () => {
     Clipboard.setString(generatedLink);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   const handleShare = () => {
@@ -74,114 +79,205 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <ScreenShell keyboardAvoiding>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft color={GOLD} size={18} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+    <AppScreen keyboardAvoiding noTopPad>
+      {/* ── Contact method toggle ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 12 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: 60 }}
+      >
+        <AppCard style={styles.card}>
+          <Text style={styles.cardTitle}>Guest Contact</Text>
+          <Text style={styles.cardSub}>
+            A tracking link will be sent automatically.
+          </Text>
 
-        <GlassCard style={styles.card}>
-          <Text style={styles.title}>Guest Information</Text>
-          <Text style={styles.subtitle}>* Tracking link will be sent automatically to the guest.</Text>
+          {/* Toggle */}
+          <View style={styles.toggleRow}>
+            {(['phone', 'email'] as const).map(method => (
+              <TouchableOpacity
+                key={method}
+                onPress={async () => { await light(); setContactMethod(method); }}
+                style={[styles.toggleBtn, contactMethod === method && styles.toggleBtnActive]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: contactMethod === method }}
+                activeOpacity={0.7}
+              >
+                {method === 'phone'
+                  ? <Phone color={contactMethod === method ? GOLD : '#6b7280'} size={15} />
+                  : <Mail  color={contactMethod === method ? GOLD : '#6b7280'} size={15} />
+                }
+                <Text style={[
+                  styles.toggleText,
+                  contactMethod === method && styles.toggleTextActive,
+                ]}>
+                  {method === 'phone' ? 'Phone' : 'Email'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
+          {/* Input */}
           <MotiView
             key={contactMethod}
-            from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }}
+            from={{ opacity: 0, translateX: contactMethod === 'phone' ? -12 : 12 }}
             animate={{ opacity: 1, translateX: 0 }}
-            transition={{ type: 'timing', duration: 300 }}
+            transition={{ type: 'timing', duration: 220 }}
           >
-            <View style={styles.inputWrap}>
-              {contactMethod === 'phone'
-                ? <Phone color={GOLD} size={20} style={styles.inputIcon} />
-                : <Mail color={GOLD} size={20} style={styles.inputIcon} />
+            <AppInput
+              leftSlot={
+                <View style={styles.inputIcon}>
+                  {contactMethod === 'phone'
+                    ? <Phone color={GOLD} size={18} />
+                    : <Mail  color={GOLD} size={18} />
+                  }
+                </View>
               }
-              <TextInput
-                style={styles.input}
-                placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
-                placeholderTextColor="#6b7280"
-                value={contactMethod === 'phone' ? guestPhone : guestEmail}
-                onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
-                keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
-                autoCapitalize="none"
-              />
-            </View>
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+              placeholder={
+                contactMethod === 'phone'
+                  ? 'Guest phone number'
+                  : 'Guest email address'
+              }
+              value={contactMethod === 'phone' ? guestPhone : guestEmail}
+              onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
+              keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
+              autoCapitalize="none"
+              containerStyle={styles.inputContainer}
+            />
+            {emailError ? (
+              <Text style={styles.errorText}>{emailError}</Text>
+            ) : null}
           </MotiView>
+        </AppCard>
+      </MotiView>
 
-          <TouchableOpacity onPress={() => setContactMethod(contactMethod === 'phone' ? 'email' : 'phone')} style={styles.switchBtn}>
-            <Text style={styles.switchText}>
-              {contactMethod === 'phone' ? "Don't have a phone? Use Email instead" : 'Use Phone Number instead'}
-            </Text>
-          </TouchableOpacity>
+      {/* ── Passenger link ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: 120 }}
+      >
+        <AppCard style={styles.linkCard}>
+          <View style={styles.linkHeader}>
+            <Link color={GOLD} size={15} />
+            <Text style={styles.linkTitle}>Passenger Tracking Link</Text>
+          </View>
 
-          {/* Generate Link button — shows the link before sending */}
-          {!generatedLink && (
-            <TouchableOpacity onPress={handleGenerateLink} style={styles.generateBtn}>
-              <Link color={GOLD} size={16} />
-              <Text style={styles.generateBtnText}>Preview Passenger Link</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Generated link display */}
-          {generatedLink ? (
-            <MotiView
-              from={{ opacity: 0, translateY: 8 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: 300 }}
-              style={styles.linkBox}
+          {!generatedLink ? (
+            <TouchableOpacity
+              onPress={handleGenerateLink}
+              style={styles.generateBtn}
+              activeOpacity={0.7}
             >
-              <Text style={styles.linkLabel}>Passenger Deep Link</Text>
-              <Text style={styles.linkText} numberOfLines={2}>{generatedLink}</Text>
+              <Text style={styles.generateBtnText}>Preview link</Text>
+            </TouchableOpacity>
+          ) : (
+            <MotiView
+              from={{ opacity: 0, translateY: 6 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'timing', duration: 220 }}
+            >
+              <Text style={styles.linkText} numberOfLines={2}>
+                {generatedLink}
+              </Text>
               <View style={styles.linkActions}>
-                <TouchableOpacity onPress={handleCopy} style={styles.linkActionBtn}>
+                <TouchableOpacity
+                  onPress={handleCopy}
+                  style={[styles.linkActionBtn, copied && styles.linkActionBtnSuccess]}
+                  activeOpacity={0.7}
+                >
                   {copied
-                    ? <CheckCircle2 color="#22c55e" size={16} />
-                    : <Copy color={GOLD} size={16} />
+                    ? <CheckCircle2 color="#22c55e" size={14} />
+                    : <Copy color={GOLD} size={14} />
                   }
                   <Text style={[styles.linkActionText, copied && { color: '#22c55e' }]}>
                     {copied ? 'Copied!' : 'Copy'}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleShare} style={styles.linkActionBtn}>
-                  <Link color={GOLD} size={16} />
+                <TouchableOpacity
+                  onPress={handleShare}
+                  style={styles.linkActionBtn}
+                  activeOpacity={0.7}
+                >
+                  <Link color={GOLD} size={14} />
                   <Text style={styles.linkActionText}>Share</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.linkNote}>
-                Tap the link on iOS/Android to open the Passenger app directly
-              </Text>
             </MotiView>
-          ) : null}
+          )}
+        </AppCard>
+      </MotiView>
 
-          <GoldButton onPress={handleRequest} disabled={!canSubmit} style={styles.btn}>
-            <Text style={styles.btnText}>Send Chauffeur Request</Text>
-          </GoldButton>
-        </GlassCard>
-    </ScreenShell>
+      {/* ── CTA ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: 160 }}
+        style={styles.ctaWrap}
+      >
+        <AppButton
+          label="Send Chauffeur Request"
+          onPress={handleRequest}
+          disabled={!canSubmit}
+          haptic="medium"
+          style={styles.ctaBtn}
+        />
+      </MotiView>
+    </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  backText: { color: GOLD, fontWeight: '700', fontSize: 14 },
-  card: { padding: 24 },
-  title: { fontSize: 22, color: '#fff', fontWeight: '900', marginBottom: 8 },
-  subtitle: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic', fontWeight: '500', marginBottom: 24 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.3)', borderRadius: 12, paddingHorizontal: 14, marginBottom: 8 },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, color: '#fff', fontSize: 16, paddingVertical: 14, fontWeight: '500' },
-  errorText: { color: '#f87171', fontSize: 12, marginBottom: 8, marginLeft: 4 },
-  switchBtn: { marginBottom: 16, marginTop: 8 },
-  switchText: { color: GOLD, fontWeight: '700', fontSize: 13 },
-  generateBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(212,175,55,0.3)', borderStyle: 'dashed' },
-  generateBtnText: { color: GOLD, fontWeight: '700', fontSize: 13 },
-  linkBox: { backgroundColor: 'rgba(212,175,55,0.05)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.3)', borderRadius: 12, padding: 14, marginBottom: 16 },
-  linkLabel: { color: GOLD, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  linkText: { color: '#fff', fontSize: 12, fontWeight: '500', marginBottom: 10, lineHeight: 18 },
-  linkActions: { flexDirection: 'row', gap: 12, marginBottom: 8 },
-  linkActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)' },
+  card: { padding: 20, marginBottom: 12 },
+  cardTitle: { fontSize: 16, color: '#fff', fontWeight: '700', marginBottom: 4 },
+  cardSub:   { fontSize: 12, color: '#6b7280', fontWeight: '500', marginBottom: 16 },
+  toggleRow: {
+    flexDirection: 'row', gap: 10, marginBottom: 16,
+  },
+  toggleBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    minHeight: 44,
+  },
+  toggleBtnActive: {
+    borderColor: GOLD_DIM,
+    backgroundColor: GOLD_FAINT,
+  },
+  toggleText:       { color: '#6b7280', fontSize: 14, fontWeight: '600' },
+  toggleTextActive: { color: GOLD },
+  inputIcon: { paddingLeft: 14, paddingRight: 6 },
+  inputContainer: { marginBottom: 4 },
+  errorText: { color: '#f87171', fontSize: 12, fontWeight: '500', marginBottom: 4, marginLeft: 4 },
+  linkCard: { padding: 16, marginBottom: 12 },
+  linkHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  linkTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  generateBtn: {
+    paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: 8, borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.25)',
+    borderStyle: 'dashed',
+    alignItems: 'center', minHeight: 44, justifyContent: 'center',
+  },
+  generateBtnText: { color: GOLD, fontSize: 13, fontWeight: '600' },
+  linkText: {
+    color: '#9ca3af', fontSize: 11, fontWeight: '500',
+    lineHeight: 17, marginBottom: 10,
+  },
+  linkActions: { flexDirection: 'row', gap: 8 },
+  linkActionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: 'rgba(212,175,55,0.06)',
+    borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)',
+    borderRadius: 8, minHeight: 36,
+  },
+  linkActionBtnSuccess: {
+    backgroundColor: 'rgba(34,197,94,0.08)',
+    borderColor: 'rgba(34,197,94,0.25)',
+  },
   linkActionText: { color: GOLD, fontSize: 12, fontWeight: '700' },
-  linkNote: { color: '#6b7280', fontSize: 10, fontStyle: 'italic' },
-  btn: { width: '100%', paddingVertical: 18 },
-  btnText: { color: '#000', fontWeight: '900', fontSize: 15, textAlign: 'center', textTransform: 'uppercase' },
+  ctaWrap: { marginTop: 4 },
+  ctaBtn: { width: '100%' },
 });

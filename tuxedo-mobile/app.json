@@ -12,6 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
+    "androidStatusBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content"
+    },
     "plugins": [
       "expo-router"
     ],

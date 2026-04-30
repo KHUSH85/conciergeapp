@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+﻿import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { MotiView } from 'moti';
-import { ArrowLeft, Calendar, Clock, Car, User, Phone, Mail, ChevronRight, ChevronLeft } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import { Calendar, Clock, Car, User, Phone, Mail, ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { GlassCard } from '../components/GlassCard';
+import { AppButton } from '../components/AppButton';
+import { AppInput } from '../components/AppInput';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
+import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
 
@@ -26,7 +30,6 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={cal.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} style={cal.container}>
-          {/* Header */}
           <View style={cal.header}>
             <TouchableOpacity onPress={() => setViewMonth(subMonths(viewMonth, 1))} style={cal.navBtn}>
               <ChevronLeft color={GOLD} size={20} />
@@ -36,11 +39,9 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
               <ChevronRight color={GOLD} size={20} />
             </TouchableOpacity>
           </View>
-          {/* Day names */}
           <View style={cal.daysRow}>
             {DAYS.map(d => <Text key={d} style={cal.dayName}>{d}</Text>)}
           </View>
-          {/* Grid */}
           <View style={cal.grid}>
             {days.map((day, i) => {
               const isCurrentMonth = isSameMonth(day, viewMonth);
@@ -53,6 +54,7 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
                   disabled={isPast || !isCurrentMonth}
                   onPress={() => { onSelect(day); onClose(); }}
                   style={[cal.dayCell, isSelected && cal.dayCellSelected, isToday && !isSelected && cal.dayCellToday]}
+                  accessibilityRole="button"
                 >
                   <Text style={[cal.dayText, !isCurrentMonth && cal.dayTextOther, isPast && cal.dayTextPast, isSelected && cal.dayTextSelected]}>
                     {format(day, 'd')}
@@ -69,6 +71,8 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
 
 export const ScheduleBookingScreen = ({ navigation }: any) => {
   const { user } = useApp();
+  const { light, medium } = useHaptics();
+  const delays = useStaggerAnimation();
   const [step, setStep] = useState<Step>('guest');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -113,13 +117,13 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScreenShell keyboardAvoiding>
-        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-          <ArrowLeft color={GOLD} size={18} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
-
-        {/* Step dots */}
+    <AppScreen keyboardAvoiding noTopPad>
+      {/* ── Step indicator ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: -8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: delays.header }}
+      >
         <View style={styles.stepsRow}>
           {STEPS.map((s, i) => (
             <View key={s} style={styles.stepItem}>
@@ -128,45 +132,60 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
             </View>
           ))}
         </View>
+      </MotiView>
 
-        {/* Step 1: Guest Info */}
+      <MotiView
+        key={step}
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 260, delay: delays.content }}
+      >
         {step === 'guest' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Schedule a Ride</Text>
-            <Text style={styles.subtitle}>* Tracking link will be sent automatically to the guest.</Text>
+            <Text style={styles.subtitle}>Tracking link will be sent automatically to the guest.</Text>
 
-            <MotiView key={contactMethod} from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: 'timing', duration: 300 }}>
-              <View style={styles.inputWrap}>
-                {contactMethod === 'phone' ? <Phone color={GOLD} size={20} style={styles.inputIcon} /> : <Mail color={GOLD} size={20} style={styles.inputIcon} />}
-                <TextInput
-                  style={styles.input}
-                  placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
-                  placeholderTextColor="#6b7280"
-                  value={contactMethod === 'phone' ? guestPhone : guestEmail}
-                  onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
-                  keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
-                  autoCapitalize="none"
-                />
-              </View>
+            <MotiView
+              key={contactMethod}
+              from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{ type: 'timing', duration: 240 }}
+            >
+              <AppInput
+                leftSlot={
+                  <View style={styles.inputIcon}>
+                    {contactMethod === 'phone' ? <Phone color={GOLD} size={20} /> : <Mail color={GOLD} size={20} />}
+                  </View>
+                }
+                placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
+                value={contactMethod === 'phone' ? guestPhone : guestEmail}
+                onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
+                keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
+                autoCapitalize="none"
+                containerStyle={styles.inputContainer}
+              />
               {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
             </MotiView>
 
-            <TouchableOpacity onPress={() => setContactMethod(contactMethod === 'phone' ? 'email' : 'phone')} style={styles.switchBtn}>
+            <TouchableOpacity
+              onPress={async () => { await light(); setContactMethod(contactMethod === 'phone' ? 'email' : 'phone'); }}
+              style={styles.switchBtn}
+            >
               <Text style={styles.switchText}>
-                {contactMethod === 'phone' ? "Don't have a phone? Use Email instead" : 'Use Phone Number instead'}
+                {contactMethod === 'phone' ? "No phone? Use Email instead" : 'Use Phone Number instead'}
               </Text>
             </TouchableOpacity>
 
-            <GoldButton onPress={goNext} disabled={!canSubmit} style={styles.btn}>
-              <View style={styles.btnInner}>
-                <Text style={styles.btnText}>Send Ride Request</Text>
-                <ChevronRight color="#000" size={18} />
-              </View>
-            </GoldButton>
+            <AppButton
+              label="Send Ride Request"
+              onPress={goNext}
+              disabled={!canSubmit}
+              haptic="medium"
+              style={styles.ctaBtn}
+            />
           </GlassCard>
         )}
 
-        {/* Step 2: Date & Time */}
         {step === 'schedule' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Reserve a Ride</Text>
@@ -182,53 +201,57 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
               }}
             />
 
-            <TouchableOpacity style={styles.inputWrap} onPress={() => setCalendarVisible(true)}>
-              <Calendar color={GOLD} size={20} style={styles.inputIcon} />
-              <Text style={[styles.input, !selectedDate && { color: '#6b7280' }]}>
+            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setCalendarVisible(true)}>
+              <Calendar color={GOLD} size={20} style={styles.inputIconInline} />
+              <Text style={[styles.datePickerText, !selectedDate && { color: '#6b7280' }]}>
                 {selectedDate || 'Select Date'}
               </Text>
             </TouchableOpacity>
-            <View style={styles.inputWrap}>
-              <Clock color={GOLD} size={20} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Time (HH:MM)"
-                placeholderTextColor="#6b7280"
-                value={selectedTime}
-                onChangeText={setSelectedTime}
-              />
-            </View>
+
+            <AppInput
+              leftSlot={<View style={styles.inputIcon}><Clock color={GOLD} size={20} /></View>}
+              placeholder="Time (HH:MM)"
+              value={selectedTime}
+              onChangeText={setSelectedTime}
+              containerStyle={styles.inputContainer}
+            />
 
             {canProceedSchedule && (
-              <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={styles.summaryBox}>
+              <MotiView
+                from={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={styles.summaryBox}
+              >
                 <Text style={styles.summaryLabel}>Scheduled For</Text>
                 <Text style={styles.summaryValue}>{selectedDate} at {selectedTime}</Text>
               </MotiView>
             )}
 
-            <GoldButton onPress={goNext} disabled={!canProceedSchedule} style={styles.btn}>
-              <View style={styles.btnInner}>
-                <Text style={styles.btnText}>Continue</Text>
-                <ChevronRight color="#000" size={18} />
-              </View>
-            </GoldButton>
+            <AppButton
+              label="Continue"
+              onPress={goNext}
+              disabled={!canProceedSchedule}
+              haptic="medium"
+              style={styles.ctaBtn}
+            />
           </GlassCard>
         )}
 
-        {/* Step 3: Chauffeur */}
         {step === 'chauffeur' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Choose Chauffeur</Text>
             <Text style={styles.subtitle}>Would you like to pre-select a chauffeur?</Text>
 
             {[
-              { id: true, title: 'Yes, Choose a Chauffeur', desc: 'Browse and select a preferred driver', icon: User },
-              { id: false, title: 'Auto-Assign', desc: 'Best available chauffeur will be assigned', icon: Car },
+              { id: true,  title: 'Yes, Choose a Chauffeur', desc: 'Browse and select a preferred driver',    icon: User },
+              { id: false, title: 'Auto-Assign',             desc: 'Best available chauffeur will be assigned', icon: Car  },
             ].map(({ id, title, desc, icon: Icon }) => (
               <TouchableOpacity
                 key={String(id)}
-                onPress={() => setChooseChauffeur(id)}
+                onPress={async () => { await light(); setChooseChauffeur(id); }}
                 style={[styles.optionBtn, chooseChauffeur === id && styles.optionBtnActive]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: chooseChauffeur === id }}
               >
                 <View style={styles.optionIcon}><Icon color={GOLD} size={22} /></View>
                 <View style={styles.optionInfo}>
@@ -238,20 +261,16 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             ))}
 
-            <GoldButton
+            <AppButton
+              label="Continue"
               onPress={() => chooseChauffeur === true ? navigation.navigate('DriverList') : goNext()}
               disabled={!canProceedChauffeur}
-              style={styles.btn}
-            >
-              <View style={styles.btnInner}>
-                <Text style={styles.btnText}>Continue</Text>
-                <ChevronRight color="#000" size={18} />
-              </View>
-            </GoldButton>
+              haptic="medium"
+              style={styles.ctaBtn}
+            />
           </GlassCard>
         )}
 
-        {/* Step 4: Confirm */}
         {step === 'confirm' && (
           <GlassCard style={styles.card}>
             <Text style={styles.title}>Confirm Booking</Text>
@@ -262,51 +281,74 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
               <Text style={styles.summaryValue}>{selectedDate} at {selectedTime}</Text>
             </View>
 
-            <GoldButton onPress={handleRequest} style={styles.btn}>
-              <Text style={styles.btnText}>Confirm Booking</Text>
-            </GoldButton>
+            <AppButton
+              label="Confirm Booking"
+              onPress={handleRequest}
+              haptic="success"
+              style={styles.ctaBtn}
+            />
           </GlassCard>
         )}
-    </ScreenShell>
+      </MotiView>
+    </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  backText: { color: GOLD, fontWeight: '700', fontSize: 14 },
-  stepsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  stepsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   stepItem: { flexDirection: 'row', alignItems: 'center' },
   stepDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#374151' },
   stepDotActive: { backgroundColor: GOLD },
   stepLine: { width: 24, height: 1, backgroundColor: '#374151', marginHorizontal: 4 },
   card: { padding: 24 },
-  title: { fontSize: 22, color: '#fff', fontWeight: '900', marginBottom: 6 },
-  subtitle: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic', fontWeight: '500', marginBottom: 20 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.3)', borderRadius: 12, paddingHorizontal: 14, marginBottom: 14 },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, color: '#fff', fontSize: 15, paddingVertical: 14, fontWeight: '500' },
-  summaryBox: { backgroundColor: 'rgba(212,175,55,0.1)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.4)', borderRadius: 12, padding: 14, marginBottom: 20 },
-  summaryLabel: { color: GOLD, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  title: { fontSize: 20, color: '#fff', fontWeight: '700', marginBottom: 6 },
+  subtitle: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginBottom: 20 },
+  inputIcon: { paddingLeft: 14, paddingRight: 4 },
+  inputIconInline: { marginRight: 10 },
+  inputContainer: { marginBottom: 14 },
+  datePickerBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)', borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 14, marginBottom: 14, minHeight: 52,
+  },
+  datePickerText: { color: '#fff', fontSize: 15, fontWeight: '500', flex: 1 },
+  summaryBox: {
+    backgroundColor: 'rgba(212,175,55,0.08)', borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.3)', borderRadius: 12, padding: 14, marginBottom: 20,
+  },
+  summaryLabel: { color: GOLD, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   summaryValue: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  btn: { width: '100%', paddingVertical: 18, marginTop: 4 },
-  btnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  btnText: { color: '#000', fontWeight: '900', fontSize: 15, textAlign: 'center', textTransform: 'uppercase' },
-  optionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 16, marginBottom: 12 },
-  optionBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,175,55,0.1)' },
-  optionIcon: { padding: 10, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)', marginRight: 14 },
+  ctaBtn: { width: '100%', marginTop: 4 },
+  optionBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 16, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2, shadowRadius: 4, elevation: 2,
+  },
+  optionBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,175,55,0.08)' },
+  optionIcon: {
+    padding: 10, borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.2)', marginRight: 14,
+  },
   optionInfo: { flex: 1 },
   optionTitle: { color: '#fff', fontWeight: '700', fontSize: 15, marginBottom: 2 },
   optionDesc: { color: '#9ca3af', fontSize: 13, fontWeight: '500' },
   errorText: { color: '#f87171', fontSize: 12, marginBottom: 8, marginLeft: 4 },
-  switchBtn: { marginBottom: 20 },
+  switchBtn: { marginBottom: 20, minHeight: 44, justifyContent: 'center' },
   switchText: { color: GOLD, fontWeight: '700', fontSize: 13 },
 });
 
 const cal = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  container: { backgroundColor: '#1a1a2e', borderWidth: 2, borderColor: 'rgba(212,175,55,0.4)', borderRadius: 16, padding: 16, width: '100%', maxWidth: 340 },
+  container: {
+    backgroundColor: '#1a1a2e', borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.4)', borderRadius: 16, padding: 16, width: '100%',
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  navBtn: { padding: 8 },
+  navBtn: { padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   monthLabel: { color: '#fff', fontWeight: '900', fontSize: 16 },
   daysRow: { flexDirection: 'row', marginBottom: 8 },
   dayName: { flex: 1, textAlign: 'center', color: GOLD, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },

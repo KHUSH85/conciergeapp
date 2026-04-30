@@ -1,13 +1,19 @@
-import React from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { ArrowLeft, Crown, CheckCircle2, Zap, CreditCard, ShieldCheck, Apple } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import { Crown, CheckCircle2, Zap, CreditCard, ShieldCheck, Apple } from 'lucide-react-native';
+import { AppCard } from '../components/AppCard';
+import { AppButton } from '../components/AppButton';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
+import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
 import { persistMembershipState } from '../utils/appStorage';
 
-const GOLD = '#D4AF37';
+const GOLD       = '#D4AF37';
+const GOLD_FAINT = 'rgba(212,175,55,0.08)';
+const GOLD_DIM   = 'rgba(212,175,55,0.25)';
+const GREEN      = '#22c55e';
 
 const BENEFITS = [
   'Manual Chauffeur Selection',
@@ -17,158 +23,320 @@ const BENEFITS = [
   'Exclusive Luxury Fleet Access',
 ];
 
-/** Matches web `/membership` — supports passenger flow from `/track-ride` via `fromTrackRide`. */
+// ─── Membership upsell screen ─────────────────────────────────────────────────
 export const MembershipScreen = ({ navigation, route }: any) => {
-  const fromTrackRide = route.params?.fromTrackRide === true;
-  const paymentMethod = route.params?.paymentMethod ?? null;
+  const fromTrackRide  = route.params?.fromTrackRide === true;
+  const paymentMethod  = route.params?.paymentMethod ?? null;
+  const { light } = useHaptics();
+  const delays = useStaggerAnimation();
 
   return (
-    <ScreenShell>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft color={GOLD} size={18} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+    <AppScreen noTopPad>
+      {/* ── Hero ── */}
+      <MotiView
+        from={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 60 }}
+      >
+        <AppCard variant="gold" style={styles.heroCard}>
+          <View style={styles.crownWrap}>
+            <Crown color={GOLD} size={44} />
+          </View>
+          <Text style={styles.heroTitle}>Tuxedo Gold</Text>
+          <Text style={styles.heroSub}>Premium Concierge Membership</Text>
 
-        <GlassCard style={styles.cardGold}>
-          <MotiView from={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }} style={styles.headerSection}>
-            <Crown color={GOLD} size={56} style={{ marginBottom: 12 }} />
-            <Text style={styles.membershipTitle}>Tuxedo Gold</Text>
-          </MotiView>
-
+          {/* Price */}
           <View style={styles.priceBox}>
-            <Text style={styles.priceLabel}>Membership Price</Text>
-            <Text style={styles.price}>$100<Text style={styles.pricePer}>/yr</Text></Text>
-            <View style={styles.creditBadge}>
-              <Zap color="#22c55e" size={14} fill="#22c55e" />
-              <Text style={styles.creditText}>Get $100 Instant Ride Credit</Text>
-            </View>
+            <Text style={styles.price}>$100</Text>
+            <Text style={styles.pricePer}>/year</Text>
           </View>
 
-          <View style={styles.benefitsList}>
-            {BENEFITS.map((benefit, i) => (
-              <MotiView key={i} from={{ opacity: 0, translateX: -20 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: 'timing', duration: 300, delay: i * 80 }}>
-                <View style={styles.benefitRow}>
-                  <CheckCircle2 color={GOLD} size={18} />
-                  <Text style={styles.benefitText}>{benefit}</Text>
-                </View>
-              </MotiView>
-            ))}
+          {/* Credit badge */}
+          <View style={styles.creditBadge}>
+            <Zap color={GREEN} size={13} fill={GREEN} />
+            <Text style={styles.creditText}>Includes $100 instant ride credit</Text>
           </View>
+        </AppCard>
+      </MotiView>
 
-          <GoldButton
-            onPress={() => navigation.navigate('MembershipPayment', { fromTrackRide, paymentMethod })}
-            style={styles.btn}
+      {/* ── Benefits ── */}
+      <Text style={styles.sectionLabel}>What's included</Text>
+      <AppCard style={styles.benefitsCard}>
+        {BENEFITS.map((benefit, i) => (
+          <MotiView
+            key={i}
+            from={{ opacity: 0, translateX: -12 }}
+            animate={{ opacity: 1, translateX: 0 }}
+            transition={{ type: 'timing', duration: 200, delay: delays.item(i) }}
           >
-            <Text style={styles.btnText}>Buy Membership</Text>
-          </GoldButton>
+            <React.Fragment>
+              <View style={styles.benefitRow}>
+                <View style={styles.benefitCheck}>
+                  <CheckCircle2 color={GOLD} size={16} />
+                </View>
+                <Text style={styles.benefitText}>{benefit}</Text>
+              </View>
+              {i < BENEFITS.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
+          </MotiView>
+        ))}
+      </AppCard>
 
-          {fromTrackRide && (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('TrackRide', { fromMembershipSkip: true, paymentMethod })}
-              style={styles.skipBtn}
-            >
-              <Text style={styles.skipText}>Continue Without Membership</Text>
-            </TouchableOpacity>
-          )}
-        </GlassCard>
-    </ScreenShell>
+      {/* ── CTAs ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: delays.cta }}
+        style={styles.ctaWrap}
+      >
+        <AppButton
+          label="Get Gold Membership"
+          onPress={() =>
+            navigation.navigate('MembershipPayment', { fromTrackRide, paymentMethod })
+          }
+          haptic="medium"
+          style={styles.primaryBtn}
+        />
+
+        {fromTrackRide && (
+          <AppButton
+            label="Continue Without Membership"
+            onPress={() =>
+              navigation.getParent()?.navigate('Home', {
+                screen: 'TrackRide',
+                params: { fromMembershipSkip: true, paymentMethod },
+              })
+            }
+            variant="ghost"
+            haptic="light"
+            style={styles.skipBtn}
+          />
+        )}
+      </MotiView>
+    </AppScreen>
   );
 };
 
-/** Matches web `/membership-payment` — after pay, driver list (passenger flow passes state from track-ride). */
+// ─── Payment screen ───────────────────────────────────────────────────────────
 export const MembershipPaymentScreen = ({ navigation, route }: any) => {
   const { setUser } = useApp();
   const fromTrackRide = route.params?.fromTrackRide === true;
   const paymentMethod = route.params?.paymentMethod ?? null;
+  const { medium, success } = useHaptics();
+  const delays = useStaggerAnimation();
+  const [loading, setLoading] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<'apple' | 'card'>('card');
 
   const handlePayment = async () => {
+    setLoading(true);
+    await medium();
+    await new Promise(r => setTimeout(r, 800));
     setUser((prev: any) => {
       if (!prev) return null;
       return { ...prev, isMember: true, rideCredit: 100 };
     });
     await persistMembershipState(true, 100);
+    await success();
+    setLoading(false);
     if (fromTrackRide) {
-      navigation.navigate('DriverList', { fromTrackRide: true, paymentMethod });
+      navigation.getParent()?.navigate('Home', {
+        screen: 'DriverList',
+        params: { fromTrackRide: true, paymentMethod },
+      });
     } else {
-      navigation.navigate('DriverList');
+      navigation.getParent()?.navigate('Home', { screen: 'DriverList' });
     }
   };
 
+  const payMethods: { id: 'apple' | 'card'; label: string; Icon: any }[] = [
+    { id: 'apple', label: 'Apple Pay',   Icon: Apple      },
+    { id: 'card',  label: 'Credit Card', Icon: CreditCard },
+  ];
+
   return (
-    <ScreenShell>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft color={GOLD} size={18} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+    <AppScreen noTopPad>
+      {/* ── Order summary ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 260, delay: 60 }}
+      >
+        <AppCard variant="gold" style={styles.summaryCard}>
+          <View style={styles.summaryIcon}>
+            <ShieldCheck color={GOLD} size={32} />
+          </View>
+          <Text style={styles.summaryTitle}>Annual Gold Membership</Text>
 
-        <GlassCard style={styles.cardGold}>
-          <MotiView from={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 15 }} style={styles.headerSection}>
-            <ShieldCheck color={GOLD} size={56} style={{ marginBottom: 12 }} />
-            <Text style={styles.payTitle}>Complete Payment</Text>
-            <Text style={styles.paySubtitle}>Annual Gold Membership</Text>
-          </MotiView>
-
-          <View style={styles.totalBox}>
+          <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Due</Text>
-            <Text style={styles.totalAmount}>$100.00</Text>
-            <View style={styles.creditBadge}>
-              <Zap color="#22c55e" size={12} fill="#22c55e" />
-              <Text style={styles.creditText}>Includes $100 Ride Credit</Text>
-            </View>
+            <Text style={styles.totalValue}>$100.00</Text>
           </View>
 
-          <View style={styles.payMethods}>
-            {[
-              { id: 'apple', label: 'Apple Pay', icon: Apple },
-              { id: 'card', label: 'Credit Card', icon: CreditCard },
-            ].map(({ id, label, icon: Icon }) => (
-              <TouchableOpacity key={id} onPress={handlePayment} style={styles.payMethod}>
-                <View style={styles.payMethodLeft}>
-                  <Icon color={GOLD} size={22} />
-                  <Text style={styles.payMethodText}>{label}</Text>
+          <View style={styles.creditBadge}>
+            <Zap color={GREEN} size={13} fill={GREEN} />
+            <Text style={styles.creditText}>Includes $100 ride credit</Text>
+          </View>
+        </AppCard>
+      </MotiView>
+
+      {/* ── Payment methods ── */}
+      <Text style={styles.sectionLabel}>Payment Method</Text>
+      <AppCard style={styles.methodsCard}>
+        {payMethods.map(({ id, label, Icon }, i) => (
+          <React.Fragment key={id}>
+            <TouchableOpacity
+              onPress={() => setSelectedMethod(id)}
+              style={styles.methodRow}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: selectedMethod === id }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.methodLeft}>
+                <View style={[
+                  styles.methodIconWrap,
+                  selectedMethod === id && styles.methodIconActive,
+                ]}>
+                  <Icon color={selectedMethod === id ? GOLD : '#6b7280'} size={20} />
                 </View>
-                <View style={styles.payMethodRadio} />
-              </TouchableOpacity>
-            ))}
-          </View>
+                <Text style={[
+                  styles.methodLabel,
+                  selectedMethod === id && styles.methodLabelActive,
+                ]}>
+                  {label}
+                </Text>
+              </View>
+              <View style={[
+                styles.radio,
+                selectedMethod === id && styles.radioSelected,
+              ]}>
+                {selectedMethod === id && <View style={styles.radioDot} />}
+              </View>
+            </TouchableOpacity>
+            {i < payMethods.length - 1 && <View style={styles.divider} />}
+          </React.Fragment>
+        ))}
+      </AppCard>
 
-          <Text style={styles.payFooter}>
-            Secure payment processed by Tuxedo Financial.{'\n'}
-            Membership unlocks full driver profiles and amenities.
-          </Text>
-        </GlassCard>
-    </ScreenShell>
+      {/* ── CTA ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: delays.cta }}
+        style={styles.ctaWrap}
+      >
+        <AppButton
+          label="Pay $100.00"
+          onPress={handlePayment}
+          loading={loading}
+          haptic="success"
+          style={styles.primaryBtn}
+        />
+        <Text style={styles.payFooter}>
+          Secure payment · Membership unlocks full driver profiles
+        </Text>
+      </MotiView>
+    </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
-  backText: { color: GOLD, fontWeight: '700', fontSize: 14 },
-  cardGold: { padding: 24, borderColor: 'rgba(212,175,55,0.3)' },
-  headerSection: { alignItems: 'center', marginBottom: 24 },
-  membershipTitle: { fontSize: 30, color: '#fff', fontWeight: '900', textTransform: 'uppercase', fontStyle: 'italic' },
-  priceBox: { backgroundColor: 'rgba(212,175,55,0.1)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 24 },
-  priceLabel: { color: GOLD, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  price: { fontSize: 48, color: '#fff', fontWeight: '900' },
-  pricePer: { fontSize: 14, color: '#6b7280', fontWeight: '700' },
-  creditBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  creditText: { color: '#22c55e', fontWeight: '700', fontSize: 12, textTransform: 'uppercase' },
-  benefitsList: { gap: 14, marginBottom: 28 },
-  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  benefitText: { color: '#d1d5db', fontSize: 14, fontWeight: '500' },
-  btn: { width: '100%', paddingVertical: 18, marginBottom: 10 },
-  btnText: { color: '#000', fontWeight: '900', fontSize: 16, textAlign: 'center', textTransform: 'uppercase' },
-  skipBtn: { paddingVertical: 12, alignItems: 'center' },
-  skipText: { color: '#6b7280', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  payTitle: { fontSize: 22, color: '#fff', fontWeight: '900', textTransform: 'uppercase', fontStyle: 'italic' },
-  paySubtitle: { color: '#6b7280', fontWeight: '900', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 },
-  totalBox: { backgroundColor: 'rgba(212,175,55,0.05)', borderWidth: 1, borderColor: 'rgba(212,175,55,0.2)', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 24 },
-  totalLabel: { color: '#9ca3af', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', marginBottom: 6 },
-  totalAmount: { fontSize: 40, color: '#fff', fontWeight: '900' },
-  payMethods: { gap: 10, marginBottom: 20 },
-  payMethod: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: 18 },
-  payMethodLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  payMethodText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  payMethodRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: 'rgba(212,175,55,0.4)' },
-  payFooter: { color: '#4b5563', fontSize: 10, textAlign: 'center', fontWeight: '900', textTransform: 'uppercase', lineHeight: 16, fontStyle: 'italic' },
+  // Membership screen
+  heroCard: { padding: 24, alignItems: 'center', marginBottom: 20 },
+  crownWrap: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1, borderColor: GOLD_DIM,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+    shadowColor: GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroTitle: {
+    fontSize: 28, color: '#fff', fontWeight: '800',
+    marginBottom: 4,
+  },
+  heroSub: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginBottom: 20 },
+  priceBox: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginBottom: 12,
+  },
+  price:    { fontSize: 48, color: '#fff', fontWeight: '800', letterSpacing: -1 },
+  pricePer: { fontSize: 16, color: '#6b7280', fontWeight: '600', marginBottom: 8 },
+  creditBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(34,197,94,0.1)',
+    borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)',
+    borderRadius: 50, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  creditText: { color: GREEN, fontSize: 12, fontWeight: '700' },
+  sectionLabel: {
+    fontSize: 11, color: '#6b7280', fontWeight: '600',
+    letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10,
+  },
+  benefitsCard: { marginBottom: 20 },
+  benefitRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 14, paddingHorizontal: 16, paddingVertical: 14, minHeight: 52,
+  },
+  benefitCheck: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: GOLD_FAINT,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  benefitText: { color: '#d1d5db', fontSize: 14, fontWeight: '500', flex: 1 },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginLeft: 62,
+  },
+  ctaWrap: { gap: 10 },
+  primaryBtn: { width: '100%' },
+  skipBtn:    { width: '100%' },
+
+  // Payment screen
+  summaryCard: { padding: 24, alignItems: 'center', marginBottom: 20 },
+  summaryIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1, borderColor: GOLD_DIM,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  summaryTitle: {
+    fontSize: 18, color: '#fff', fontWeight: '700', marginBottom: 16,
+  },
+  totalRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12,
+  },
+  totalLabel: { color: '#9ca3af', fontSize: 14, fontWeight: '500' },
+  totalValue: { fontSize: 32, color: '#fff', fontWeight: '800' },
+  methodsCard: { marginBottom: 20 },
+  methodRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 16, minHeight: 60,
+  },
+  methodLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  methodIconWrap: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  methodIconActive: { backgroundColor: GOLD_FAINT },
+  methodLabel:       { color: '#9ca3af', fontSize: 15, fontWeight: '600' },
+  methodLabelActive: { color: '#fff' },
+  radio: {
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  radioSelected: { borderColor: GOLD },
+  radioDot: {
+    width: 10, height: 10, borderRadius: 5, backgroundColor: GOLD,
+  },
+  payFooter: {
+    color: '#4b5563', fontSize: 11, fontWeight: '500',
+    textAlign: 'center', lineHeight: 16,
+  },
 });

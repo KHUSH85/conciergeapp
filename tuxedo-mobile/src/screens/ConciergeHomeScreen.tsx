@@ -1,129 +1,313 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+﻿import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { MotiView } from 'moti';
-import { Car, Wallet, TrendingUp, History, User, Calendar } from 'lucide-react-native';
-import { GlassCard, GoldButton } from '../components/GlassCard';
-import { ScreenShell } from '../components/ScreenShell';
+import {
+  Car, Wallet, TrendingUp, History,
+  User, Calendar, ChevronRight, Zap,
+} from 'lucide-react-native';
+import { AppCard } from '../components/AppCard';
+import { AppButton } from '../components/AppButton';
+import { AppScreen } from '../components/AppScreen';
+import { useHaptics } from '../hooks/useHaptics';
+import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
 
-const GOLD = '#D4AF37';
+const GOLD       = '#D4AF37';
+const GOLD_FAINT = 'rgba(212,175,55,0.08)';
+const GOLD_DIM   = 'rgba(212,175,55,0.25)';
+const GREEN      = '#22c55e';
 
 export const ConciergeHomeScreen = ({ navigation }: any) => {
   const { user } = useApp();
+  const { light } = useHaptics();
+  const delays = useStaggerAnimation();
+
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  })();
 
   const stats = [
-    { icon: Wallet, label: "Today's Earnings", value: '$142.50' },
-    { icon: Car, label: 'Rides Today', value: '12' },
-    { icon: TrendingUp, label: 'Weekly Growth', value: '+15%' },
-    { icon: History, label: 'Recent Payout', value: '$856' },
+    { icon: Wallet,     label: "Today's Earnings", value: '$142.50', sub: '+$18 vs yesterday' },
+    { icon: Car,        label: 'Rides Today',       value: '12',      sub: '3 active now'      },
+    { icon: TrendingUp, label: 'Weekly Growth',     value: '+15%',    sub: 'vs last week'      },
+    { icon: History,    label: 'Recent Payout',     value: '$856',    sub: 'Dec 18'            },
+  ];
+
+  const quickLinks = [
+    {
+      icon: History,
+      label: 'Ride History',
+      sub: '5 rides this week',
+      onPress: () => navigation.navigate('Rides' as any, { screen: 'RideHistory' }),
+    },
+    {
+      icon: Wallet,
+      label: 'Commission Wallet',
+      sub: '$142.50 today',
+      onPress: () => navigation.navigate('Wallet' as any, { screen: 'CommissionWallet' }),
+    },
+    {
+      icon: Car,
+      label: 'Track Passenger Ride',
+      sub: 'Share live link',
+      onPress: () => Linking.openURL('https://passengerweb-app.vercel.app/track-ride'),
+    },
   ];
 
   return (
-    <ScreenShell>
-      {/* Header */}
-      <MotiView from={{ opacity: 0, translateY: -20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 500 }} style={styles.header}>
-        <View>
+    <AppScreen>
+      {/* ── Header ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: -16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.header }}
+        style={styles.header}
+      >
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{greeting}</Text>
           <Text style={styles.userName}>{user?.name || 'Concierge'}</Text>
           <Text style={styles.hotelName}>{user?.hotelName || 'Luxury Concierge'}</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileBtn}>
-          <User color={GOLD} size={22} />
+        <TouchableOpacity
+          onPress={async () => {
+            await light();
+            navigation.navigate('ProfileTab' as any, { screen: 'Profile' });
+          }}
+          style={styles.profileBtn}
+          accessibilityLabel="Profile"
+          accessibilityRole="button"
+        >
+          <User color={GOLD} size={20} />
         </TouchableOpacity>
       </MotiView>
 
-      {/* Primary CTA */}
-      <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'timing', duration: 500, delay: 100 }}>
-        <GlassCard style={styles.ctaCard}>
-          <MotiView
-            from={{ translateY: 0 }}
-            animate={{ translateY: -8 }}
-            transition={{ type: 'timing', duration: 2000, loop: true }}
-          >
-            <Car color={GOLD} size={64} style={styles.ctaIcon} />
-          </MotiView>
-          <Text style={styles.ctaTitle}>Request Guest Transport</Text>
-          <GoldButton
-            onPress={() => navigation.navigate('GuestDetails', { bookingMode: 'instant', pickupLocation: user?.hotelName || 'The Grand Majestic Hotel' })}
-            style={styles.ctaBtn}
-          >
-            <View style={styles.btnInner}>
-              <Car color="#000" size={18} />
-              <Text style={styles.ctaBtnText}>Call a Car</Text>
+      {/* ── Membership credit pill (if member) ── */}
+      {user?.isMember && (
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 220, delay: delays.header + 40 }}
+          style={styles.creditPill}
+        >
+          <Zap color={GREEN} size={13} fill={GREEN} />
+          <Text style={styles.creditPillText}>
+            ${(user.rideCredit || 0).toFixed(2)} ride credit available
+          </Text>
+        </MotiView>
+      )}
+
+      {/* ── Primary Actions ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 260, delay: delays.content }}
+      >
+        <AppCard variant="gold" style={styles.heroCard}>
+          <View style={styles.heroTop}>
+            <MotiView
+              from={{ translateY: 0 }}
+              animate={{ translateY: -6 }}
+              transition={{ type: 'timing', duration: 2200, loop: true }}
+            >
+              <Car color={GOLD} size={48} />
+            </MotiView>
+            <View style={styles.heroText}>
+              <Text style={styles.heroTitle}>Guest Transport</Text>
+              <Text style={styles.heroSub}>Dispatch a premium chauffeur</Text>
             </View>
-          </GoldButton>
-          <GoldButton
+          </View>
+
+          <AppButton
+            label="Call a Car  →"
+            onPress={() =>
+              navigation.navigate('GuestDetails', {
+                bookingMode: 'instant',
+                pickupLocation: user?.hotelName || 'The Grand Majestic Hotel',
+              })
+            }
+            style={styles.primaryBtn}
+          />
+
+          <AppButton
+            label="Reserve a Ride"
             onPress={() => navigation.navigate('ScheduleBooking')}
             variant="secondary"
-            style={[styles.ctaBtn, { marginTop: 10 }]}
-          >
-            <View style={styles.btnInner}>
-              <Calendar color={GOLD} size={18} />
-              <View>
-                <Text style={[styles.ctaBtnText, { color: GOLD }]}>Reserve a Ride</Text>
-                <Text style={styles.scheduleSubtext}>Schedule Reservation</Text>
-              </View>
-            </View>
-          </GoldButton>
-          <Text style={styles.trackingNote}>Tracking link will be sent automatically to the guest</Text>
-        </GlassCard>
+            style={styles.secondaryBtn}
+          />
+
+          <View style={styles.trackingNote}>
+            <Text style={styles.trackingNoteText}>
+              Tracking link sent automatically to guest
+            </Text>
+          </View>
+        </AppCard>
       </MotiView>
 
-      {/* Stats Grid */}
+      {/* ── Stats Grid ── */}
       <View style={styles.statsGrid}>
-        {stats.map(({ icon: Icon, label, value }, i) => (
-          <MotiView key={label} from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 500, delay: 300 + i * 50 }} style={styles.statWrap}>
-            <GlassCard style={styles.statCard}>
-              <Icon color={GOLD} size={28} />
-              <Text style={styles.statLabel}>{label}</Text>
+        {stats.map(({ icon: Icon, label, value, sub }, i) => (
+          <MotiView
+            key={label}
+            from={{ opacity: 0, translateY: 16 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 240, delay: delays.item(i) }}
+            style={styles.statWrap}
+          >
+            <AppCard style={styles.statCard}>
+              <View style={styles.statIconWrap}>
+                <Icon color={GOLD} size={18} />
+              </View>
               <Text style={styles.statValue}>{value}</Text>
-            </GlassCard>
+              <Text style={styles.statLabel}>{label}</Text>
+              <Text style={styles.statSub}>{sub}</Text>
+            </AppCard>
           </MotiView>
         ))}
       </View>
 
-      {/* Secondary Actions */}
-      <MotiView from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: 'timing', duration: 500, delay: 500 }}>
-        <GoldButton onPress={() => navigation.navigate('RideHistory')} variant="ghost" style={styles.ghostBtn}>
-          <View style={styles.btnInner}>
-            <History color={GOLD} size={22} />
-            <Text style={styles.ghostBtnText}>Ride History</Text>
-          </View>
-        </GoldButton>
-        <GoldButton onPress={() => navigation.navigate('CommissionWallet')} variant="ghost" style={[styles.ghostBtn, { marginTop: 10 }]}>
-          <View style={styles.btnInner}>
-            <Wallet color={GOLD} size={22} />
-            <Text style={styles.ghostBtnText}>Commission Wallet</Text>
-          </View>
-        </GoldButton>
-        <GoldButton onPress={() => navigation.navigate('TrackRide')} variant="ghost" style={[styles.ghostBtn, { marginTop: 10, borderColor: 'rgba(212,175,55,0.4)' }]}>
-          <View style={styles.btnInner}>
-            <Car color={GOLD} size={22} />
-            <Text style={styles.ghostBtnText}>Passenger Track Ride</Text>
-          </View>
-        </GoldButton>
+      {/* ── Quick Links ── */}
+      <MotiView
+        from={{ opacity: 0, translateY: 16 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 240, delay: delays.cta }}
+      >
+        <Text style={styles.sectionLabel}>Quick Access</Text>
+        <AppCard style={styles.quickLinksCard}>
+          {quickLinks.map(({ icon: Icon, label, sub, onPress }, i) => (
+            <React.Fragment key={label}>
+              <TouchableOpacity
+                onPress={async () => { await light(); onPress(); }}
+                style={styles.quickLinkRow}
+                accessibilityRole="button"
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickLinkIcon}>
+                  <Icon color={GOLD} size={18} />
+                </View>
+                <View style={styles.quickLinkText}>
+                  <Text style={styles.quickLinkLabel}>{label}</Text>
+                  <Text style={styles.quickLinkSub}>{sub}</Text>
+                </View>
+                <ChevronRight color="#4b5563" size={16} />
+              </TouchableOpacity>
+              {i < quickLinks.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
+          ))}
+        </AppCard>
       </MotiView>
-    </ScreenShell>
+    </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  userName: { fontSize: 22, color: '#fff', fontWeight: '900' },
-  hotelName: { fontSize: 14, color: '#9ca3af', fontWeight: '500', marginTop: 2 },
-  profileBtn: { padding: 12, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.6)', borderWidth: 2, borderColor: 'rgba(212,175,55,0.3)' },
-  ctaCard: { padding: 28, alignItems: 'center', marginBottom: 20, borderColor: 'rgba(212,175,55,0.4)' },
-  ctaIcon: { marginBottom: 16 },
-  ctaTitle: { fontSize: 20, color: '#fff', fontWeight: '900', marginBottom: 20, textAlign: 'center' },
-  ctaBtn: { width: '100%', paddingVertical: 16 },
-  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
-  ctaBtnText: { color: '#000', fontWeight: '900', fontSize: 16 },
-  scheduleSubtext: { color: '#6b7280', fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  trackingNote: { color: '#6b7280', fontSize: 12, fontStyle: 'italic', marginTop: 14, textAlign: 'center' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20, justifyContent: 'space-between' },
-  statWrap: { flexGrow: 1, flexBasis: '47%', minWidth: 148, maxWidth: '48%' },
-  statCard: { padding: 16 },
-  statLabel: { color: '#9ca3af', fontSize: 12, fontWeight: '500', marginTop: 10, marginBottom: 4 },
-  statValue: { color: '#fff', fontSize: 20, fontWeight: '900' },
-  ghostBtn: { width: '100%', paddingVertical: 16, borderColor: 'rgba(212,175,55,0.2)' },
-  ghostBtnText: { color: GOLD, fontWeight: '700', fontSize: 16 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  headerLeft: { flex: 1 },
+  greeting: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  userName:  { fontSize: 24, color: '#fff', fontWeight: '800', letterSpacing: -0.3 },
+  hotelName: { fontSize: 13, color: '#6b7280', fontWeight: '500', marginTop: 2 },
+  profileBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1, borderColor: GOLD_DIM,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 4,
+  },
+  creditPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(34,197,94,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.3)',
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 16,
+  },
+  creditPillText: { color: '#22c55e', fontSize: 12, fontWeight: '700' },
+  heroCard: {
+    padding: 20,
+    marginBottom: 16,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 20,
+  },
+  heroText: { flex: 1 },
+  heroTitle: { fontSize: 18, color: '#fff', fontWeight: '800', marginBottom: 3 },
+  heroSub:   { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
+  primaryBtn:   { width: '100%', marginBottom: 10 },
+  secondaryBtn: { width: '100%' },
+  trackingNote: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+  },
+  trackingNoteText: { color: '#4b5563', fontSize: 11, fontWeight: '500' },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  statWrap: { flexGrow: 1, flexBasis: '47%' },
+  statCard: { padding: 14 },
+  statIconWrap: {
+    width: 32, height: 32, borderRadius: 8,
+    backgroundColor: GOLD_FAINT,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statValue: { fontSize: 22, color: '#fff', fontWeight: '800', marginBottom: 2 },
+  statLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '500', marginBottom: 2 },
+  statSub:   { fontSize: 10, color: '#4b5563', fontWeight: '500' },
+  sectionLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  quickLinksCard: { marginBottom: 8 },
+  quickLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 56,
+  },
+  quickLinkIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: GOLD_FAINT,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  quickLinkText: { flex: 1 },
+  quickLinkLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  quickLinkSub:   { color: '#6b7280', fontSize: 12, fontWeight: '500', marginTop: 1 },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginLeft: 66,
+  },
 });
