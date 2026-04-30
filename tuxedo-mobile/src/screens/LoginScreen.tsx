@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Modal, FlatList,
@@ -61,10 +61,14 @@ const CountryPicker: React.FC<CountryPickerProps> = ({ selected, onSelect }) => 
   const [search, setSearch] = useState('');
   const { light } = useHaptics();
 
-  const filtered = search.trim()
-    ? COUNTRIES.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) || c.dial.includes(search))
-    : COUNTRIES;
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return COUNTRIES;
+    return COUNTRIES.filter(c =>
+      (c.name ?? '').toLowerCase().includes(q) ||
+      (c.dial ?? '').includes(q)
+    );
+  }, [search]);
 
   const handleSelect = async (c: Country) => {
     await light();
@@ -367,7 +371,9 @@ export const LoginScreen = ({ navigation }: any) => {
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
     const persisted = await loadMembershipState();
-    setUser({
+    const onboarded = await isUserOnboarded();
+
+    const newUser = {
       id: '1',
       name: role === 'manager' ? 'Sarah Mitchell' : 'James Anderson',
       email: role === 'manager' ? 'sarah@grandhotel.com' : 'james@grandhotel.com',
@@ -377,16 +383,21 @@ export const LoginScreen = ({ navigation }: any) => {
       hotelName: 'The Grand Majestic Hotel',
       deviceBound: true,
       deviceName: 'Concierge Desk Mobile',
-      kycStatus: 'approved',
+      kycStatus: 'approved' as const,
       isMember: persisted.isMember,
       rideCredit: persisted.isMember ? persisted.rideCredit : 0,
-    });
+    };
+
     setLoading(false);
-    const onboarded = await isUserOnboarded();
-    if (onboarded) {
-      navigation.replace('Home');
+
+    if (!onboarded) {
+      // Do NOT call setUser here — pass the user data as a param so
+      // FirstTimeSetupScreen can call setUser after setup, avoiding
+      // the NavigationContainer key switch racing with navigation.replace.
+      navigation.replace('FirstTimeSetup', { role, pendingUser: newUser });
     } else {
-      navigation.replace('FirstTimeSetup', { role });
+      // Already onboarded — setUser triggers AppNavigator key switch to 'main'.
+      setUser(newUser);
     }
   }, [phone, country, role, setUser, navigation]);
 
