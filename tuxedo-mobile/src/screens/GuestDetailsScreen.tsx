@@ -13,7 +13,7 @@ import { useApp } from '../context/AppContext';
 const GOLD       = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
 const GOLD_DIM   = 'rgba(212,175,55,0.25)';
-const WEBSITE_BASE_URL = 'https://passenger-webapp.vercel.app';
+const WEBSITE_BASE_URL = 'https://conciergeapptuxedo.vercel.app';
 
 function generateRideToken(): string {
   return Math.random().toString(36).slice(2, 10).toUpperCase();

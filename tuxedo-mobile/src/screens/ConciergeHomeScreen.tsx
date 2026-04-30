@@ -53,7 +53,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       icon: Car,
       label: 'Track Passenger Ride',
       sub: 'Share live link',
-      onPress: () => Linking.openURL('https://passengerweb-app.vercel.app/track-ride'),
+      onPress: () => Linking.openURL('https://conciergeapptuxedo.vercel.app/track-ride?token=MB1HCPUS&pickup=The+Grand+Majestic+Hotel'),
     },
   ];
 
