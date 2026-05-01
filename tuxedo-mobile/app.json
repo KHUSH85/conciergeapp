@@ -33,14 +33,14 @@
         "NSMicrophoneUsageDescription": "This app needs access to your microphone to record voice messages.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "bundleIdentifier": "com.jashom.tuxedomobile"
+      "bundleIdentifier": "com.jashom.tuxedomobile.jaydave"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.jashom.tuxedomobile",
+      "package": "com.jashom.tuxedomobile.jaydave",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
