@@ -16,6 +16,7 @@ const GOLD       = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
 const GOLD_DIM   = 'rgba(212,175,55,0.25)';
 const GREEN      = '#22c55e';
+const PASSENGER_TRACKING_URL = 'https://passenger-webapp-lac.vercel.app/track-ride';
 
 export const ConciergeHomeScreen = ({ navigation }: any) => {
   const { user } = useApp();
@@ -53,7 +54,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       icon: Car,
       label: 'Track Passenger Ride',
       sub: 'Share live link',
-      onPress: () => Linking.openURL('https://conciergeapptuxedo.vercel.app/track-ride?token=MB1HCPUS&pickup=The+Grand+Majestic+Hotel'),
+      onPress: () => Linking.openURL(PASSENGER_TRACKING_URL),
     },
   ];
 
