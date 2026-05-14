@@ -7,15 +7,6 @@ import { ConciergeHomeScreen } from '../screens/ConciergeHomeScreen';
 import { GuestDetailsScreen } from '../screens/GuestDetailsScreen';
 import { ScheduleBookingScreen } from '../screens/ScheduleBookingScreen';
 import { WaitingForPaymentScreen } from '../screens/WaitingForPaymentScreen';
-import { DriverMatchingScreen } from '../screens/DriverMatchingScreen';
-import {
-  DriverAssignmentModeScreen,
-  DriverListScreen,
-  DriverProfileScreen,
-  DriverSwipeScreen,
-} from '../screens/DriverSelectionScreens';
-import { DriverConfirmationScreen } from '../screens/DriverConfirmationScreen';
-import { DriverETAScreen } from '../screens/DriverETAScreen';
 import { TrackRideScreen } from '../screens/TrackRideScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -31,10 +22,8 @@ export function HomeStack() {
         animation: 'fade',
       }}
     >
-      {/* Root — no header (has its own inline header) */}
       <Stack.Screen name="ConciergeHome" component={ConciergeHomeScreen} />
 
-      {/* Booking flow — each screen gets AppHeader via its own header option */}
       <Stack.Screen
         name="GuestDetails"
         component={GuestDetailsScreen}
@@ -67,71 +56,6 @@ export function HomeStack() {
           ),
           ...SLIDE,
         })}
-      />
-      <Stack.Screen
-        name="DriverMatching"
-        component={DriverMatchingScreen}
-        options={{ ...SLIDE }}
-      />
-      <Stack.Screen
-        name="DriverAssignmentMode"
-        component={DriverAssignmentModeScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Assign chauffeur" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
-      />
-      <Stack.Screen
-        name="DriverList"
-        component={DriverListScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Select chauffeur" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
-      />
-      <Stack.Screen
-        name="DriverProfile"
-        component={DriverProfileScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Chauffeur profile" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
-      />
-      <Stack.Screen
-        name="DriverSwipe"
-        component={DriverSwipeScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Choose chauffeur" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
-      />
-      <Stack.Screen
-        name="DriverConfirmation"
-        component={DriverConfirmationScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Confirm chauffeur" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
-      />
-      <Stack.Screen
-        name="DriverETA"
-        component={DriverETAScreen}
-        options={{ ...SLIDE }}
       />
       <Stack.Screen
         name="TrackRide"

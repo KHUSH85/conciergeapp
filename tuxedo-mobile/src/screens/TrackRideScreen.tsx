@@ -13,7 +13,7 @@ import { AppScreen } from '../components/AppScreen';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
-import { storePendingAppDownloadCoupon } from '../utils/appStorage';
+import { storePendingRideCreditOffer } from '../utils/appStorage';
 import type { User as AppUser } from '../types';
 
 const GOLD = '#D4AF37';
@@ -303,7 +303,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
 const AppDownloadPopup = ({ visible, user, onClose }: { visible: boolean; user: AppUser | null; onClose: () => void; }) => {
   const handleDownloadApp = async () => {
     try {
-      await storePendingAppDownloadCoupon(user);
+      await storePendingRideCreditOffer(user);
       await Linking.openURL('https://apps.apple.com');
     } catch {}
     onClose();

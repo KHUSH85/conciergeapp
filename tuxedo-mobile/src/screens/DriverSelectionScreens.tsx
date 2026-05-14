@@ -25,8 +25,8 @@ export const DriverAssignmentModeScreen = ({ navigation }: any) => {
   const delays = useStaggerAnimation();
 
   const modes = [
-    { id: 'auto',   title: 'Auto Match',       desc: 'System selects best available driver',              icon: Zap,  screen: 'DriverMatching' },
-    { id: 'manual', title: 'Manual Selection', desc: 'Browse and choose from available drivers',          icon: List, screen: 'DriverList'     },
+    { id: 'auto',   title: 'Auto Match',       desc: 'System selects the best available chauffeur',         icon: Zap,  screen: 'DriverMatching' },
+    { id: 'manual', title: 'Manual Selection', desc: 'Browse and choose from available chauffeurs',       icon: List, screen: 'DriverList'     },
     { id: 'swipe',  title: 'Swipe Match',      desc: 'Luxury experience - swipe to find perfect match',  icon: Heart,screen: 'DriverSwipe'    },
   ];
 

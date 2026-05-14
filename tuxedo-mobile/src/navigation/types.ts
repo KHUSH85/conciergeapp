@@ -21,13 +21,6 @@ export type HomeStackParamList = {
     scheduledTime?: string;
     serviceType?: 'transfer' | 'hourly';
   };
-  DriverMatching: undefined;
-  DriverAssignmentMode: undefined;
-  DriverList: undefined;
-  DriverProfile: { driverId: string };
-  DriverSwipe: undefined;
-  DriverConfirmation: undefined;
-  DriverETA: undefined;
   TrackRide: undefined;
 };
 

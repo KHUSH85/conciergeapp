@@ -3,7 +3,9 @@ import type { User } from '../types';
 
 const KEY_MEMBER = 'isMember';
 const KEY_CREDIT = 'rideCredit';
-const KEY_PENDING_COUPON = 'pendingAppDownloadCoupon';
+const KEY_PENDING_RIDE_CREDIT = 'tuxedoPendingRideCredit';
+const KEY_PENDING_LEGACY = 'pendingAppDownloadCoupon';
+const KEY_HAS_INSTALLED_APP = 'tuxedoHasInstalledApp';
 
 export async function loadMembershipState(): Promise<{ isMember: boolean; rideCredit: number }> {
   const [[, m], [, rc]] = await AsyncStorage.multiGet([KEY_MEMBER, KEY_CREDIT]);
@@ -22,14 +24,22 @@ export async function persistMembershipState(isMember: boolean, rideCredit: numb
   }
 }
 
-function generateCouponCode(): string {
+export async function getHasInstalledApp(): Promise<boolean> {
+  return (await AsyncStorage.getItem(KEY_HAS_INSTALLED_APP)) === 'true';
+}
+
+export async function setHasInstalledApp(): Promise<void> {
+  await AsyncStorage.setItem(KEY_HAS_INSTALLED_APP, 'true');
+}
+
+function generateRideCreditCode(): string {
   const token = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `TUX100-${token}`;
 }
 
-export async function storePendingAppDownloadCoupon(user: User | null): Promise<void> {
-  const couponData = {
-    code: generateCouponCode(),
+export async function storePendingRideCreditOffer(user: User | null): Promise<void> {
+  const payload = {
+    code: generateRideCreditCode(),
     amount: 100,
     campaign: 'track-ride-download-popup',
     linkedIdentity: {
@@ -39,5 +49,10 @@ export async function storePendingAppDownloadCoupon(user: User | null): Promise<
     status: 'pending_app_login',
     issuedAt: new Date().toISOString(),
   };
-  await AsyncStorage.setItem(KEY_PENDING_COUPON, JSON.stringify(couponData));
+  await AsyncStorage.setItem(KEY_PENDING_RIDE_CREDIT, JSON.stringify(payload));
+  await AsyncStorage.removeItem(KEY_PENDING_LEGACY);
+}
+
+export async function storePendingAppDownloadCoupon(user: User | null): Promise<void> {
+  return storePendingRideCreditOffer(user);
 }
