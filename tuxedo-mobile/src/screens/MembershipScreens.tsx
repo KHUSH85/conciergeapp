@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Crown, CheckCircle2, Zap, CreditCard, ShieldCheck, Apple } from 'lucide-react-native';
@@ -16,11 +16,10 @@ const GOLD_DIM   = 'rgba(212,175,55,0.25)';
 const GREEN      = '#22c55e';
 
 const BENEFITS = [
-  'Manual Chauffeur Selection',
-  'View Full Driver Amenities',
-  'Advanced Search Filters',
-  'Priority Dispatching',
-  'Exclusive Luxury Fleet Access',
+  '24-hour on-demand concierge (dedicated line)',
+  'Advanced chauffeur filters',
+  'Full chauffeur profiles',
+  'Priority dispatching',
 ];
 
 // ─── Membership upsell screen ─────────────────────────────────────────────────
@@ -48,13 +47,13 @@ export const MembershipScreen = ({ navigation, route }: any) => {
           {/* Price */}
           <View style={styles.priceBox}>
             <Text style={styles.price}>$100</Text>
-            <Text style={styles.pricePer}>/year</Text>
+            <Text style={styles.pricePer}>/month</Text>
           </View>
 
           {/* Credit badge */}
           <View style={styles.creditBadge}>
             <Zap color={GREEN} size={13} fill={GREEN} />
-            <Text style={styles.creditText}>Includes $100 instant ride credit</Text>
+            <Text style={styles.creditText}>Get $100 toward your next ride each month · does not roll over</Text>
           </View>
         </AppCard>
       </MotiView>
@@ -140,11 +139,11 @@ export const MembershipPaymentScreen = ({ navigation, route }: any) => {
     setLoading(false);
     if (fromTrackRide) {
       navigation.getParent()?.navigate('Home', {
-        screen: 'DriverList',
-        params: { fromTrackRide: true, paymentMethod },
+        screen: 'TrackRide',
+        params: { fromMembershipPurchase: true, paymentMethod },
       });
     } else {
-      navigation.getParent()?.navigate('Home', { screen: 'DriverList' });
+      navigation.getParent()?.navigate('Home', { screen: 'ConciergeHome' });
     }
   };
 
@@ -165,16 +164,16 @@ export const MembershipPaymentScreen = ({ navigation, route }: any) => {
           <View style={styles.summaryIcon}>
             <ShieldCheck color={GOLD} size={32} />
           </View>
-          <Text style={styles.summaryTitle}>Annual Gold Membership</Text>
+          <Text style={styles.summaryTitle}>Gold membership (monthly)</Text>
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Due</Text>
+            <Text style={styles.totalLabel}>Due today</Text>
             <Text style={styles.totalValue}>$100.00</Text>
           </View>
 
           <View style={styles.creditBadge}>
             <Zap color={GREEN} size={13} fill={GREEN} />
-            <Text style={styles.creditText}>Includes $100 ride credit</Text>
+            <Text style={styles.creditText}>Includes $100 toward your next ride · monthly credit does not stack</Text>
           </View>
         </AppCard>
       </MotiView>
@@ -232,7 +231,7 @@ export const MembershipPaymentScreen = ({ navigation, route }: any) => {
           style={styles.primaryBtn}
         />
         <Text style={styles.payFooter}>
-          Secure payment · Membership unlocks full driver profiles
+          Secure payment · Chauffeur choice and full profiles are for members in the passenger app
         </Text>
       </MotiView>
     </AppScreen>

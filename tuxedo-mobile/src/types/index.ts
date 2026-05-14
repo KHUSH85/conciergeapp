@@ -94,3 +94,15 @@ export interface Commission {
   rides: number;
   total: number;
 }
+
+/** Concierge-visible rides awaiting guest / in dispatch (not completed). */
+export interface OpenRideRequest {
+  id: string;
+  guestLabel: string;
+  pickup: string;
+  serviceType: 'transfer' | 'hourly';
+  status: 'awaiting_guest' | 'matching' | 'assigned' | 'in_progress';
+  createdAt: string;
+  /** Present for scheduled / reserve flows */
+  scheduledFor?: string;
+}

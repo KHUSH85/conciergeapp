@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
@@ -32,7 +32,7 @@ function driverToDisplay(driver: any): TrackingDriver {
   const tags: string[] = [];
   if (driver.amenities?.wifi) tags.push('WiFi');
   if (driver.amenities?.water) tags.push('Refreshments');
-  if (driver.amenities?.music) tags.push('Premium Audio');
+  if (driver.amenities?.music) tags.push('AUX');
   tags.push(driver.vehicle?.interior || 'Leather Interior');
   return {
     name: shortName, rating: String(driver.rating),
@@ -72,9 +72,10 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
   }, [route.params]);
 
   useEffect(() => {
+    if (isMember) return;
     const t = setTimeout(() => setShowAppPopup(true), 5000);
     return () => clearTimeout(t);
-  }, []);
+  }, [isMember]);
 
   useEffect(() => {
     if (step === 'tracking') {
@@ -149,7 +150,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
               <View style={styles.pickupBox}>
                 <Text style={styles.pickupLabel}>Pickup Location</Text>
                 <Text style={styles.pickupValue}>{pickupLocation}</Text>
-                <Text style={styles.pickupNote}>Set by Concierge</Text>
+                <Text style={styles.pickupNote}>Set by concierge</Text>
               </View>
               <AppInput
                 leftSlot={<View style={styles.inputIcon}><MapPin color={GOLD} size={20} /></View>}
@@ -159,7 +160,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
                 containerStyle={styles.inputContainer}
               />
               <AppButton
-                label="Request Chauffeur"
+                label="Continue"
                 onPress={handleRequestChauffeur}
                 disabled={!dropOff.trim()}
                 haptic="medium"
@@ -225,7 +226,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
                 <View style={[styles.progressFill, { width: `${progressWidth}%` }]} />
               </View>
               <Text style={styles.etaText}>
-                Live: Driver is {etaMins} mins away in a {assignedDriver.vehicle}
+                Your chauffeur is ~{etaMins} mins away in a {assignedDriver.vehicle}
               </Text>
               <View style={styles.amenitiesBox}>
                 <View style={styles.amenitiesHeader}>
@@ -278,7 +279,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
                   {isMember ? 'Tuxedo Gold Member' : 'Tuxedo Basic Status'}
                 </Text>
                 <Text style={styles.footerSub}>
-                  {isMember ? `${(user?.rideCredit || 0).toFixed(2)} Ride Credit` : 'Join for $100 & Get $100 Credit'}
+                  {isMember ? `${(user?.rideCredit || 0).toFixed(2)} ride credit` : '$100/mo · $100 toward your next ride'}
                 </Text>
               </View>
             </View>
@@ -300,8 +301,6 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
 };
 
 const AppDownloadPopup = ({ visible, user, onClose }: { visible: boolean; user: AppUser | null; onClose: () => void; }) => {
-  const { medium } = useHaptics();
-
   const handleDownloadApp = async () => {
     try {
       await storePendingAppDownloadCoupon(user);
@@ -323,7 +322,8 @@ const AppDownloadPopup = ({ visible, user, onClose }: { visible: boolean; user: 
               <Sparkles color={GOLD} size={32} />
             </View>
             <Text style={popup.title}>
-              Download our app and get <Text style={{ color: GOLD }}>$100 coupon free</Text> on your next ride.
+              Get <Text style={{ color: GOLD, fontWeight: '800' }}>$100</Text>
+              {' '}toward your next ride when you download the Tuxedo app.
             </Text>
             <AppButton label="Download App" onPress={handleDownloadApp} haptic="medium" style={popup.btn} />
             <AppButton label="Skip for Now" onPress={onClose} variant="ghost" haptic="light" style={popup.skipBtn} />

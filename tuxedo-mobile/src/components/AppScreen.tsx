@@ -1,9 +1,10 @@
 import React, { ReactNode } from 'react';
 import {
+  View,
   ScrollView, KeyboardAvoidingView,
   Platform, StyleSheet, ViewStyle, StyleProp,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
   children: ReactNode;
@@ -25,6 +26,7 @@ export function AppScreen({
   noTopPad = false,
   contentStyle,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const scrollView = (
     <ScrollView
       style={styles.flex}
@@ -56,9 +58,19 @@ export function AppScreen({
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <View
+      style={[
+        styles.safe,
+        {
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
       {inner}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -67,9 +79,9 @@ const styles = StyleSheet.create({
   flex:    { flex: 1 },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
   noTopPad: {
     paddingTop: 8,

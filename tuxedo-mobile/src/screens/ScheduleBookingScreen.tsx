@@ -1,7 +1,7 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { MotiView } from 'moti';
-import { Calendar, Clock, Car, User, Phone, Mail, ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { Calendar, Clock, Phone, Mail, ChevronRight, ChevronLeft, ArrowRightLeft } from 'lucide-react-native';
 import { GlassCard } from '../components/GlassCard';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
@@ -12,8 +12,8 @@ import { useApp } from '../context/AppContext';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
 
 const GOLD = '#D4AF37';
-type Step = 'guest' | 'schedule' | 'chauffeur' | 'confirm';
-const STEPS: Step[] = ['guest', 'schedule', 'chauffeur', 'confirm'];
+type Step = 'guest' | 'schedule' | 'serviceType' | 'confirm';
+const STEPS: Step[] = ['guest', 'schedule', 'serviceType', 'confirm'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
@@ -70,15 +70,15 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
 };
 
 export const ScheduleBookingScreen = ({ navigation }: any) => {
-  const { user } = useApp();
-  const { light, medium } = useHaptics();
+  const { user, addOpenRideRequest } = useApp();
+  const { light } = useHaptics();
   const delays = useStaggerAnimation();
   const [step, setStep] = useState<Step>('guest');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDateObj, setSelectedDateObj] = useState<Date | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
-  const [chooseChauffeur, setChooseChauffeur] = useState<boolean | null>(null);
+  const [serviceType, setServiceType] = useState<'transfer' | 'hourly'>('transfer');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -91,7 +91,6 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   };
 
   const canProceedSchedule = selectedDate.length > 0 && selectedTime.length > 0;
-  const canProceedChauffeur = chooseChauffeur !== null;
   const canSubmit = contactMethod === 'phone' ? guestPhone.length > 5 : (guestEmail && validateEmail(guestEmail) && !emailError);
 
   const goNext = () => {
@@ -105,14 +104,24 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   };
 
   const handleRequest = () => {
+    const pickup = user?.hotelName || 'The Grand Majestic Hotel';
+    const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
+    const scheduledFor = `${selectedDate} · ${selectedTime}`;
+    addOpenRideRequest({
+      guestLabel,
+      pickup,
+      serviceType,
+      status: 'awaiting_guest',
+      scheduledFor,
+    });
     navigation.navigate('WaitingForPayment', {
       bookingMode: 'scheduled',
       scheduledDate: selectedDate,
       scheduledTime: selectedTime,
-      chooseChauffeur,
       guestPhone: contactMethod === 'phone' ? guestPhone : '',
       guestEmail: contactMethod === 'email' ? guestEmail : '',
-      pickupLocation: user?.hotelName || 'The Grand Majestic Hotel',
+      pickupLocation: pickup,
+      serviceType,
     });
   };
 
@@ -237,37 +246,48 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
           </GlassCard>
         )}
 
-        {step === 'chauffeur' && (
+        {step === 'serviceType' && (
           <GlassCard style={styles.card}>
-            <Text style={styles.title}>Choose Chauffeur</Text>
-            <Text style={styles.subtitle}>Would you like to pre-select a chauffeur?</Text>
+            <Text style={styles.title}>Transfer or hourly</Text>
+            <Text style={styles.subtitle}>Concierge rides use auto-assign. Manual chauffeur pick is for members in the passenger app only.</Text>
 
-            {[
-              { id: true,  title: 'Yes, Choose a Chauffeur', desc: 'Browse and select a preferred driver',    icon: User },
-              { id: false, title: 'Auto-Assign',             desc: 'Best available chauffeur will be assigned', icon: Car  },
-            ].map(({ id, title, desc, icon: Icon }) => (
-              <TouchableOpacity
-                key={String(id)}
-                onPress={async () => { await light(); setChooseChauffeur(id); }}
-                style={[styles.optionBtn, chooseChauffeur === id && styles.optionBtnActive]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: chooseChauffeur === id }}
-              >
-                <View style={styles.optionIcon}><Icon color={GOLD} size={22} /></View>
-                <View style={styles.optionInfo}>
-                  <Text style={styles.optionTitle}>{title}</Text>
-                  <Text style={styles.optionDesc}>{desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              onPress={async () => {
+                await light();
+                setServiceType('transfer');
+              }}
+              style={[styles.optionBtn, serviceType === 'transfer' && styles.optionBtnActive]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: serviceType === 'transfer' }}
+            >
+              <View style={styles.optionIcon}>
+                <ArrowRightLeft color={GOLD} size={22} />
+              </View>
+              <View style={styles.optionInfo}>
+                <Text style={styles.optionTitle}>Transfer</Text>
+                <Text style={styles.optionDesc}>Point A → point B when the guest adds a drop-off.</Text>
+              </View>
+            </TouchableOpacity>
 
-            <AppButton
-              label="Continue"
-              onPress={() => chooseChauffeur === true ? navigation.navigate('DriverList') : goNext()}
-              disabled={!canProceedChauffeur}
-              haptic="medium"
-              style={styles.ctaBtn}
-            />
+            <TouchableOpacity
+              onPress={async () => {
+                await light();
+                setServiceType('hourly');
+              }}
+              style={[styles.optionBtn, serviceType === 'hourly' && styles.optionBtnActive]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: serviceType === 'hourly' }}
+            >
+              <View style={styles.optionIcon}>
+                <Clock color={GOLD} size={22} />
+              </View>
+              <View style={styles.optionInfo}>
+                <Text style={styles.optionTitle}>Hourly</Text>
+                <Text style={styles.optionDesc}>Timed service from pickup; mileage rules apply in pricing later.</Text>
+              </View>
+            </TouchableOpacity>
+
+            <AppButton label="Continue" onPress={goNext} haptic="medium" style={styles.ctaBtn} />
           </GlassCard>
         )}
 
@@ -277,8 +297,15 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
             <Text style={styles.subtitle}>Review and confirm the scheduled ride.</Text>
 
             <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>Scheduled Ride</Text>
-              <Text style={styles.summaryValue}>{selectedDate} at {selectedTime}</Text>
+              <Text style={styles.summaryLabel}>Service</Text>
+              <Text style={styles.summaryValue}>{serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}</Text>
+            </View>
+
+            <View style={[styles.summaryBox, { marginTop: 10 }]}>
+              <Text style={styles.summaryLabel}>Scheduled ride</Text>
+              <Text style={styles.summaryValue}>
+                {selectedDate} at {selectedTime}
+              </Text>
             </View>
 
             <AppButton

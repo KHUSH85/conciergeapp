@@ -11,7 +11,16 @@ export type HomeStackParamList = {
   ConciergeHome: undefined;
   GuestDetails: { bookingMode: 'instant' | 'scheduled'; pickupLocation: string };
   ScheduleBooking: undefined;
-  WaitingForPayment: undefined;
+  WaitingForPayment: {
+    guestPhone?: string;
+    guestEmail?: string;
+    bookingMode?: string;
+    pickupLocation?: string;
+    passengerLink?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    serviceType?: 'transfer' | 'hourly';
+  };
   DriverMatching: undefined;
   DriverAssignmentMode: undefined;
   DriverList: undefined;
@@ -24,7 +33,15 @@ export type HomeStackParamList = {
 
 // ─── Rides ───────────────────────────────────────────────────────────────────
 export type RidesStackParamList = {
-  ActiveRide: undefined;
+  OpenRidesList: undefined;
+  ActiveRide:
+    | {
+        driver?: any;
+        paymentType?: string;
+        estimatedFare?: number;
+        openRideId?: string;
+      }
+    | undefined;
   RideHistory: undefined;
   RideCompletion: undefined;
 };

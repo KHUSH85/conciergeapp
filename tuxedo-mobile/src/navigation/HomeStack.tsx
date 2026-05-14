@@ -79,7 +79,7 @@ export function HomeStack() {
         options={({ navigation }) => ({
           headerShown: true,
           header: () => (
-            <AppHeader title="Assign Driver" onBack={() => navigation.goBack()} />
+            <AppHeader title="Assign chauffeur" onBack={() => navigation.goBack()} />
           ),
           ...SLIDE,
         })}
@@ -90,7 +90,7 @@ export function HomeStack() {
         options={({ navigation }) => ({
           headerShown: true,
           header: () => (
-            <AppHeader title="Select Driver" onBack={() => navigation.goBack()} />
+            <AppHeader title="Select chauffeur" onBack={() => navigation.goBack()} />
           ),
           ...SLIDE,
         })}
@@ -101,7 +101,7 @@ export function HomeStack() {
         options={({ navigation }) => ({
           headerShown: true,
           header: () => (
-            <AppHeader title="Driver Profile" onBack={() => navigation.goBack()} />
+            <AppHeader title="Chauffeur profile" onBack={() => navigation.goBack()} />
           ),
           ...SLIDE,
         })}
@@ -112,7 +112,7 @@ export function HomeStack() {
         options={({ navigation }) => ({
           headerShown: true,
           header: () => (
-            <AppHeader title="Choose Driver" onBack={() => navigation.goBack()} />
+            <AppHeader title="Choose chauffeur" onBack={() => navigation.goBack()} />
           ),
           ...SLIDE,
         })}
@@ -123,7 +123,7 @@ export function HomeStack() {
         options={({ navigation }) => ({
           headerShown: true,
           header: () => (
-            <AppHeader title="Confirm Driver" onBack={() => navigation.goBack()} />
+            <AppHeader title="Confirm chauffeur" onBack={() => navigation.goBack()} />
           ),
           ...SLIDE,
         })}

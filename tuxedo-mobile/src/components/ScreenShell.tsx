@@ -9,7 +9,7 @@ import {
   StyleProp,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsiveLayout } from '../theme/responsive';
 
 type Props = {
@@ -69,9 +69,19 @@ export function ScreenShell({
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <View
+      style={[
+        styles.safe,
+        {
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
       {inner}
-    </SafeAreaView>
+    </View>
   );
 }
 

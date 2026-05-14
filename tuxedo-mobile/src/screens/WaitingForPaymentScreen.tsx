@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Car, Send, RefreshCw, ArrowLeft } from 'lucide-react-native';
@@ -10,10 +10,15 @@ import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 
 const GOLD = '#D4AF37';
 
-export const WaitingForPaymentScreen = ({ navigation }: any) => {
+export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
   const { light } = useHaptics();
   const delays = useStaggerAnimation();
   const [resent, setResent] = useState(false);
+
+  const serviceType = route?.params?.serviceType as 'transfer' | 'hourly' | undefined;
+  const pickup = route?.params?.pickupLocation as string | undefined;
+  const scheduledDate = route?.params?.scheduledDate as string | undefined;
+  const scheduledTime = route?.params?.scheduledTime as string | undefined;
 
   const handleResend = async () => {
     await light();
@@ -55,6 +60,26 @@ export const WaitingForPaymentScreen = ({ navigation }: any) => {
             Tracking link delivered to guest.{'\n'}
             Waiting for destination and payment.
           </Text>
+
+          {(serviceType || scheduledDate || pickup) && (
+            <View style={styles.metaBox}>
+              {serviceType ? (
+                <Text style={styles.metaLine}>
+                  Service: <Text style={styles.metaStrong}>{serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}</Text>
+                </Text>
+              ) : null}
+              {pickup ? (
+                <Text style={styles.metaLine} numberOfLines={2}>
+                  Pickup: <Text style={styles.metaStrong}>{pickup}</Text>
+                </Text>
+              ) : null}
+              {scheduledDate ? (
+                <Text style={styles.metaLine}>
+                  Scheduled: <Text style={styles.metaStrong}>{scheduledDate}{scheduledTime ? ` · ${scheduledTime}` : ''}</Text>
+                </Text>
+              ) : null}
+            </View>
+          )}
 
           {/* Status pill */}
           <View style={styles.statusPill}>
@@ -111,7 +136,7 @@ export const WaitingForPaymentScreen = ({ navigation }: any) => {
         transition={{ type: 'timing', duration: 260, delay: delays.cta }}
       >
         <Text style={styles.footer}>
-          You'll be notified once the passenger completes payment.
+          You will be notified when the guest completes payment. Future jobs can broadcast to chauffeurs — first to accept wins; cancel and penalty rules are set on the back end.
         </Text>
       </MotiView>
     </AppScreen>
@@ -151,6 +176,17 @@ const styles = StyleSheet.create({
     width: 7, height: 7, borderRadius: 4, backgroundColor: GOLD,
   },
   statusText: { color: GOLD, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  metaBox: {
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  metaLine: { color: '#9ca3af', fontSize: 12, fontWeight: '500', marginBottom: 4 },
+  metaStrong: { color: '#e5e7eb', fontWeight: '700' },
   actionsWrap: { width: '100%', gap: 10, marginBottom: 20 },
   primaryBtn: { width: '100%' },
   resendBtn: {

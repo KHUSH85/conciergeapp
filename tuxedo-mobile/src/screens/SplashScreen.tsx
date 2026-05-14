@@ -1,11 +1,15 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { MotiView, MotiText } from 'moti';
 import { Easing } from 'react-native-reanimated';
+import Constants from 'expo-constants';
 
 const { width } = Dimensions.get('window');
 const GOLD = '#D4AF37';
 const GOLD_LIGHT = '#F0D060';
+
+const APP_VERSION =
+  Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -13,14 +17,12 @@ interface SplashScreenProps {
 
 export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish }) => {
   useEffect(() => {
-    // Navigate after 3.2s — animation completes at ~600ms, rest is intentional hold
     const timer = setTimeout(onFinish, 3200);
     return () => clearTimeout(timer);
   }, [onFinish]);
 
   return (
     <View style={styles.container}>
-      {/* Subtle radial glow behind logo */}
       <MotiView
         from={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 0.12, scale: 1.15 }}
@@ -28,24 +30,19 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
         style={styles.glow}
       />
 
-      {/* Logo mark — diamond / crest shape */}
       <MotiView
         from={{ opacity: 0, scale: 0.75 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'timing', duration: 600, easing: Easing.out(Easing.cubic) }}
         style={styles.logoContainer}
       >
-        {/* Outer ring */}
         <View style={styles.outerRing}>
-          {/* Inner ring */}
           <View style={styles.innerRing}>
-            {/* Monogram */}
             <Text style={styles.monogram}>T</Text>
           </View>
         </View>
       </MotiView>
 
-      {/* Brand name */}
       <MotiView
         from={{ opacity: 0, translateY: 12 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -54,7 +51,6 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
         <Text style={styles.brandName}>TUXEDO</Text>
       </MotiView>
 
-      {/* Divider line */}
       <MotiView
         from={{ opacity: 0, scaleX: 0 }}
         animate={{ opacity: 1, scaleX: 1 }}
@@ -62,15 +58,22 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
         style={styles.divider}
       />
 
-      {/* Tagline */}
       <MotiText
         from={{ opacity: 0 }}
-        animate={{ opacity: 0.7 }}
+        animate={{ opacity: 0.75 }}
         transition={{ type: 'timing', duration: 400, delay: 750 }}
         style={styles.tagline}
       >
         LUXURY CHAUFFEUR SERVICE
       </MotiText>
+
+      <MotiView
+        from={{ opacity: 0, translateY: 6 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 450, delay: 950 }}
+      >
+        <Text style={styles.version}>Concierge · v{APP_VERSION}</Text>
+      </MotiView>
     </View>
   );
 };
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 28,
+    marginBottom: 26,
   },
   outerRing: {
     width: 120,
@@ -121,25 +124,34 @@ const styles = StyleSheet.create({
     lineHeight: 60,
   },
   brandName: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '300',
     color: GOLD,
-    letterSpacing: 14,
+    letterSpacing: 12,
     textAlign: 'center',
   },
   divider: {
-    width: 60,
-    height: 0.5,
+    width: 72,
+    height: 2,
     backgroundColor: GOLD,
     marginTop: 16,
     marginBottom: 14,
-    opacity: 0.8,
+    opacity: 0.85,
+    borderRadius: 1,
   },
   tagline: {
-    fontSize: 10,
-    fontWeight: '400',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#FFFFFF',
-    letterSpacing: 5,
+    letterSpacing: 3,
     textAlign: 'center',
+  },
+  version: {
+    marginTop: 28,
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.38)',
+    letterSpacing: 0.6,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium',
   },
 });

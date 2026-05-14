@@ -11,10 +11,10 @@ export function useResponsiveLayout() {
   const insets = useSafeAreaInsets();
 
   return useMemo(() => {
-    const horizontalPadding = 20;
-    const isTablet    = width >= 768;
+    const isTablet = width >= 768;
     const isSmallPhone = width < 360;
-    const bottomPad   = Math.max(
+    const horizontalPadding = isSmallPhone ? 16 : 20;
+    const bottomPad = Math.max(
       insets.bottom,
       Platform.select({ ios: 8, android: 12, default: 8 }) ?? 8,
     );

@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Car } from 'lucide-react-native';
@@ -43,7 +43,7 @@ export const DriverMatchingScreen = ({ navigation }: any) => {
           </View>
 
           <Text style={styles.title}>Finding Your Chauffeur</Text>
-          <Text style={styles.subtitle}>Connecting you with the closest available premium vehicle...</Text>
+          <Text style={styles.subtitle}>Broadcasting to nearby chauffeurs — first to accept wins.</Text>
 
           <MotiView
             from={{ rotate: '0deg' }}

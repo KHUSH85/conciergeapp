@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
@@ -11,6 +11,7 @@ import { AppScreen } from '../components/AppScreen';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
 
 const GOLD       = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -38,9 +39,15 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
 
   const quickLinks = [
     {
+      icon: Car,
+      label: 'Active rides',
+      sub: 'Open requests & maps',
+      onPress: () => navigation.navigate('Rides' as any),
+    },
+    {
       icon: History,
-      label: 'Ride History',
-      sub: '5 rides this week',
+      label: 'Completed rides',
+      sub: 'Past trips & payouts',
       onPress: () => navigation.navigate('Rides' as any, { screen: 'RideHistory' }),
     },
     {
@@ -53,7 +60,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       icon: Car,
       label: 'Track Passenger Ride',
       sub: 'Share live link',
-      onPress: () => Linking.openURL('https://conciergeapptuxedo.vercel.app/track-ride?token=MB1HCPUS&pickup=The+Grand+Majestic+Hotel'),
+      onPress: () => Linking.openURL(`${PASSENGER_WEB_BASE_URL}/track-ride?token=MB1HCPUS&pickup=The+Grand+Majestic+Hotel`),
     },
   ];
 
