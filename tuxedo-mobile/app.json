@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tuxedo-mobile",
-    "slug": "tuxedo-mobile",
+    "name": "Concierge App",
+    "slug": "concierge-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

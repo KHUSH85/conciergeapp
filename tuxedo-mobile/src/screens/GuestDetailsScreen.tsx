@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Share } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
 import { MotiView } from 'moti';
-import { Phone, Mail, Link, Copy, CheckCircle2, ArrowRightLeft, Clock } from 'lucide-react-native';
+import { Phone, Mail, Link, Copy, CheckCircle2, ArrowRightLeft, Clock, MapPin } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
@@ -14,6 +14,15 @@ import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
 const GOLD_DIM = 'rgba(212,175,55,0.25)';
+const BORDER = 'rgba(255,255,255,0.08)';
+const SURFACE = 'rgba(255,255,255,0.04)';
+
+const TYPE = {
+  caption: 10,
+  small: 11,
+  body: 13,
+  title: 15,
+} as const;
 
 function generateRideToken(): string {
   return Math.random().toString(36).slice(2, 10).toUpperCase();
@@ -23,6 +32,40 @@ function buildPassengerLink(pickup: string): string {
   const token = generateRideToken();
   const params = new URLSearchParams({ token, pickup });
   return `${PASSENGER_WEB_BASE_URL}/track-ride?${params.toString()}`;
+}
+
+function Segment({
+  selected,
+  onSelect,
+  options,
+}: {
+  selected: string;
+  onSelect: (id: string) => void;
+  options: { id: string; label: string; icon: React.ReactNode }[];
+}) {
+  return (
+    <View style={styles.segmentTrack}>
+      {options.map((opt) => {
+        const active = selected === opt.id;
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onSelect(opt.id)}
+            style={({ pressed }) => [
+              styles.segmentBtn,
+              active && styles.segmentBtnActive,
+              pressed && !active && styles.segmentBtnPressed,
+            ]}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+          >
+            {opt.icon}
+            <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{opt.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
 export const GuestDetailsScreen = ({ navigation, route }: any) => {
@@ -52,6 +95,11 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const pickupLocation = route.params?.pickupLocation || user?.hotelName || 'The Grand Majestic Hotel';
 
   const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
+
+  const serviceHint =
+    serviceType === 'transfer'
+      ? 'One-way to a destination'
+      : 'As-directed by the hour';
 
   const handleRequest = async () => {
     await medium();
@@ -93,94 +141,108 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
     });
   };
 
+  const selectService = async (id: string) => {
+    await light();
+    setServiceType(id as 'transfer' | 'hourly');
+  };
+
+  const selectContact = async (method: 'phone' | 'email') => {
+    await light();
+    setContactMethod(method);
+  };
+
   return (
     <AppScreen keyboardAvoiding noTopPad>
+      {/* Pickup context */}
       <MotiView
-        from={{ opacity: 0, translateY: 12 }}
+        from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 240, delay: 60 }}
+        transition={{ type: 'timing', duration: 220, delay: 40 }}
+        style={styles.pickupBanner}
+      >
+        <View style={styles.pickupIconWrap}>
+          <MapPin color={GOLD} size={14} />
+        </View>
+        <Text style={styles.pickupText} numberOfLines={2}>
+          {pickupLocation}
+        </Text>
+      </MotiView>
+
+      {/* Ride type */}
+      <MotiView
+        from={{ opacity: 0, translateY: 10 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 220, delay: 60 }}
       >
         <AppCard style={styles.card}>
           <Text style={styles.cardTitle}>Ride type</Text>
-          <Text style={styles.cardSub}>Transfer is point A → B. Hourly is timed service at pickup (destination rules apply later).</Text>
-          <View style={styles.typeRow}>
-            <TouchableOpacity
-              onPress={async () => {
-                await light();
-                setServiceType('transfer');
-              }}
-              style={[styles.typeBtn, serviceType === 'transfer' && styles.typeBtnActive]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: serviceType === 'transfer' }}
-            >
-              <ArrowRightLeft color={serviceType === 'transfer' ? GOLD : '#6b7280'} size={20} />
-              <Text style={[styles.typeBtnTitle, serviceType === 'transfer' && styles.typeBtnTitleActive]}>Transfer</Text>
-              <Text style={styles.typeBtnDesc}>One-way to a destination</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={async () => {
-                await light();
-                setServiceType('hourly');
-              }}
-              style={[styles.typeBtn, serviceType === 'hourly' && styles.typeBtnActive]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: serviceType === 'hourly' }}
-            >
-              <Clock color={serviceType === 'hourly' ? GOLD : '#6b7280'} size={20} />
-              <Text style={[styles.typeBtnTitle, serviceType === 'hourly' && styles.typeBtnTitleActive]}>Hourly</Text>
-              <Text style={styles.typeBtnDesc}>As-directed by the hour</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.cardSub}>
+            Transfer is point A → B. Hourly is timed service at pickup (destination rules apply later).
+          </Text>
+
+          <Segment
+            selected={serviceType}
+            onSelect={selectService}
+            options={[
+              {
+                id: 'transfer',
+                label: 'Transfer',
+                icon: <ArrowRightLeft color={serviceType === 'transfer' ? GOLD : '#6b7280'} size={16} />,
+              },
+              {
+                id: 'hourly',
+                label: 'Hourly',
+                icon: <Clock color={serviceType === 'hourly' ? GOLD : '#6b7280'} size={16} />,
+              },
+            ]}
+          />
+          <Text style={styles.segmentHint}>{serviceHint}</Text>
         </AppCard>
       </MotiView>
 
+      {/* Guest contact */}
       <MotiView
-        from={{ opacity: 0, translateY: 12 }}
+        from={{ opacity: 0, translateY: 10 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 240, delay: 80 }}
+        transition={{ type: 'timing', duration: 220, delay: 80 }}
       >
         <AppCard style={styles.card}>
           <Text style={styles.cardTitle}>Guest contact</Text>
-          <Text style={styles.cardSub}>A tracking link will be sent automatically. Chauffeurs are auto-assigned (manual pick is for members in the passenger app only).</Text>
+          <Text style={styles.cardSub}>
+            A tracking link will be sent automatically. Chauffeurs are auto-assigned (manual pick is for members in the passenger app only).
+          </Text>
 
-          <View style={styles.toggleRow}>
-            {(['phone', 'email'] as const).map((method) => (
-              <TouchableOpacity
-                key={method}
-                onPress={async () => {
-                  await light();
-                  setContactMethod(method);
-                }}
-                style={[styles.toggleBtn, contactMethod === method && styles.toggleBtnActive]}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: contactMethod === method }}
-                activeOpacity={0.7}
-              >
-                {method === 'phone' ? (
-                  <Phone color={contactMethod === method ? GOLD : '#6b7280'} size={15} />
-                ) : (
-                  <Mail color={contactMethod === method ? GOLD : '#6b7280'} size={15} />
-                )}
-                <Text style={[styles.toggleText, contactMethod === method && styles.toggleTextActive]}>
-                  {method === 'phone' ? 'Phone' : 'Email'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Segment
+            selected={contactMethod}
+            onSelect={(id) => selectContact(id as 'phone' | 'email')}
+            options={[
+              {
+                id: 'phone',
+                label: 'Phone',
+                icon: <Phone color={contactMethod === 'phone' ? GOLD : '#6b7280'} size={15} />,
+              },
+              {
+                id: 'email',
+                label: 'Email',
+                icon: <Mail color={contactMethod === 'email' ? GOLD : '#6b7280'} size={15} />,
+              },
+            ]}
+          />
 
           <MotiView
             key={contactMethod}
-            from={{ opacity: 0, translateX: contactMethod === 'phone' ? -12 : 12 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ type: 'timing', duration: 220 }}
+            from={{ opacity: 0, translateY: 6 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={styles.inputBlock}
           >
             <AppInput
               leftSlot={
                 <View style={styles.inputIcon}>
                   {contactMethod === 'phone' ? (
-                    <Phone color={GOLD} size={18} />
+                    <Phone color={GOLD} size={17} />
                   ) : (
-                    <Mail color={GOLD} size={18} />
+                    <Mail color={GOLD} size={17} />
                   )}
                 </View>
               }
@@ -196,146 +258,287 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
         </AppCard>
       </MotiView>
 
+      {/* Tracking link */}
       <MotiView
         from={{ opacity: 0, translateY: 10 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 120 }}
+        transition={{ type: 'timing', duration: 220, delay: 100 }}
       >
-        <AppCard style={styles.linkCard}>
+        <AppCard style={styles.card}>
           <View style={styles.linkHeader}>
-            <Link color={GOLD} size={15} />
+            <View style={styles.linkIconWrap}>
+              <Link color={GOLD} size={14} />
+            </View>
             <Text style={styles.linkTitle}>Passenger tracking link</Text>
           </View>
 
           {!generatedLink ? (
-            <TouchableOpacity onPress={handleGenerateLink} style={styles.generateBtn} activeOpacity={0.7}>
+            <Pressable
+              onPress={handleGenerateLink}
+              style={({ pressed }) => [styles.generateBtn, pressed && styles.generateBtnPressed]}
+            >
               <Text style={styles.generateBtnText}>Preview link</Text>
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <MotiView
-              from={{ opacity: 0, translateY: 6 }}
+              from={{ opacity: 0, translateY: 4 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: 220 }}
+              transition={{ type: 'timing', duration: 180 }}
             >
-              <Text style={styles.linkText} numberOfLines={2}>
-                {generatedLink}
-              </Text>
+              <View style={styles.linkBox}>
+                <Text style={styles.linkText} numberOfLines={3} selectable>
+                  {generatedLink}
+                </Text>
+              </View>
               <View style={styles.linkActions}>
-                <TouchableOpacity
+                <Pressable
                   onPress={handleCopy}
-                  style={[styles.linkActionBtn, copied && styles.linkActionBtnSuccess]}
-                  activeOpacity={0.7}
+                  style={({ pressed }) => [
+                    styles.linkActionBtn,
+                    copied && styles.linkActionBtnSuccess,
+                    pressed && styles.linkActionBtnPressed,
+                  ]}
                 >
                   {copied ? <CheckCircle2 color="#22c55e" size={14} /> : <Copy color={GOLD} size={14} />}
-                  <Text style={[styles.linkActionText, copied && { color: '#22c55e' }]}>{copied ? 'Copied!' : 'Copy'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleShare} style={styles.linkActionBtn} activeOpacity={0.7}>
+                  <Text style={[styles.linkActionText, copied && styles.linkActionTextSuccess]}>
+                    {copied ? 'Copied!' : 'Copy'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleShare}
+                  style={({ pressed }) => [styles.linkActionBtn, pressed && styles.linkActionBtnPressed]}
+                >
                   <Link color={GOLD} size={14} />
                   <Text style={styles.linkActionText}>Share</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </MotiView>
           )}
         </AppCard>
       </MotiView>
 
+      {/* CTA */}
       <MotiView
-        from={{ opacity: 0, translateY: 10 }}
+        from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 160 }}
+        transition={{ type: 'timing', duration: 220, delay: 120 }}
         style={styles.ctaWrap}
       >
-        <AppButton label="Send ride request" onPress={handleRequest} disabled={!canSubmit} haptic="medium" style={styles.ctaBtn} />
+        <AppButton
+          label="Send ride request"
+          onPress={handleRequest}
+          disabled={!canSubmit}
+          haptic="medium"
+          style={styles.ctaBtn}
+        />
       </MotiView>
     </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  card: { padding: 20, marginBottom: 12 },
-  cardTitle: { fontSize: 16, color: '#fff', fontWeight: '700', marginBottom: 4 },
-  cardSub: { fontSize: 12, color: '#6b7280', fontWeight: '500', marginBottom: 16 },
-  typeRow: { flexDirection: 'row', gap: 10 },
-  typeBtn: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    minHeight: 100,
-  },
-  typeBtnActive: { borderColor: GOLD_DIM, backgroundColor: GOLD_FAINT },
-  typeBtnTitle: { color: '#9ca3af', fontSize: 15, fontWeight: '800', marginTop: 8 },
-  typeBtnTitleActive: { color: GOLD },
-  typeBtnDesc: { color: '#6b7280', fontSize: 11, fontWeight: '500', marginTop: 4, lineHeight: 15 },
-  toggleRow: {
+  pickupBanner: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    marginBottom: 16,
-  },
-  toggleBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    minHeight: 44,
-  },
-  toggleBtnActive: {
-    borderColor: GOLD_DIM,
-    backgroundColor: GOLD_FAINT,
-  },
-  toggleText: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
-  toggleTextActive: { color: GOLD },
-  inputIcon: { paddingLeft: 14, paddingRight: 6 },
-  inputContainer: { marginBottom: 4 },
-  errorText: { color: '#f87171', fontSize: 12, fontWeight: '500', marginBottom: 4, marginLeft: 4 },
-  linkCard: { padding: 16, marginBottom: 12 },
-  linkHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  linkTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  generateBtn: {
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: SURFACE,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.25)',
-    borderStyle: 'dashed',
+    borderColor: BORDER,
+  },
+  pickupIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
     alignItems: 'center',
-    minHeight: 44,
     justifyContent: 'center',
   },
-  generateBtnText: { color: GOLD, fontSize: 13, fontWeight: '600' },
-  linkText: {
-    color: '#9ca3af',
-    fontSize: 11,
-    fontWeight: '500',
-    lineHeight: 17,
+  pickupText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+
+  card: {
+    padding: 14,
     marginBottom: 10,
   },
-  linkActions: { flexDirection: 'row', gap: 8 },
-  linkActionBtn: {
+  cardTitle: {
+    fontSize: TYPE.title,
+    color: '#fff',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cardSub: {
+    fontSize: TYPE.small,
+    color: 'rgba(255,255,255,0.45)',
+    fontWeight: '500',
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+
+  segmentTrack: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 4,
+  },
+  segmentBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(212,175,55,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.2)',
+    minHeight: 40,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    minHeight: 36,
+  },
+  segmentBtnActive: {
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+  },
+  segmentBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  segmentLabel: {
+    color: '#6b7280',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  segmentLabelActive: {
+    color: GOLD,
+  },
+  segmentHint: {
+    marginTop: 10,
+    fontSize: TYPE.small,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+
+  inputBlock: {
+    marginTop: 12,
+  },
+  inputIcon: {
+    paddingLeft: 12,
+    paddingRight: 4,
+  },
+  inputContainer: {
+    marginBottom: 0,
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+    marginTop: 6,
+    marginLeft: 2,
+  },
+
+  linkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  linkIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkTitle: {
+    color: '#fff',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  generateBtn: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderStyle: 'dashed',
+    backgroundColor: GOLD_FAINT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generateBtnPressed: {
+    opacity: 0.88,
+  },
+  generateBtnText: {
+    color: GOLD,
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  linkBox: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 10,
+  },
+  linkText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  linkActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  linkActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 10,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderRadius: 10,
+  },
+  linkActionBtnPressed: {
+    opacity: 0.9,
   },
   linkActionBtnSuccess: {
     backgroundColor: 'rgba(34,197,94,0.08)',
-    borderColor: 'rgba(34,197,94,0.25)',
+    borderColor: 'rgba(34,197,94,0.28)',
   },
-  linkActionText: { color: GOLD, fontSize: 12, fontWeight: '700' },
-  ctaWrap: { marginTop: 4 },
-  ctaBtn: { width: '100%' },
+  linkActionText: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '700',
+  },
+  linkActionTextSuccess: {
+    color: '#22c55e',
+  },
+
+  ctaWrap: {
+    marginTop: 6,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: BORDER,
+  },
+  ctaBtn: {
+    width: '100%',
+  },
 });

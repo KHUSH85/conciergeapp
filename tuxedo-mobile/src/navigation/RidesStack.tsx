@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RidesStackParamList } from './types';
-import { AppHeader } from '../components/AppHeader';
+import { stackScreenOptions } from './stackHeader';
 
 import { OpenRidesListScreen } from '../screens/OpenRidesListScreen';
 import { ActiveRideScreen } from '../screens/ActiveRideScreen';
@@ -21,28 +21,20 @@ export function RidesStack() {
       }}
     >
       <Stack.Screen name="OpenRidesList" component={OpenRidesListScreen} />
-      <Stack.Screen name="ActiveRide" component={ActiveRideScreen} />
+      <Stack.Screen
+        name="ActiveRide"
+        component={ActiveRideScreen}
+        options={({ navigation }) => stackScreenOptions('Active ride', navigation, 'Live trip status')}
+      />
       <Stack.Screen
         name="RideHistory"
         component={RideHistoryScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Ride History" onBack={() => navigation.goBack()} />
-          ),
-          animation: 'slide_from_right',
-        })}
+        options={({ navigation }) => stackScreenOptions('Ride history', navigation)}
       />
       <Stack.Screen
         name="RideCompletion"
         component={RideCompletionScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Ride Complete" onBack={() => navigation.goBack()} />
-          ),
-          animation: 'slide_from_right',
-        })}
+        options={({ navigation }) => stackScreenOptions('Ride complete', navigation)}
       />
     </Stack.Navigator>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeStackParamList } from './types';
-import { AppHeader } from '../components/AppHeader';
+import { stackScreenOptions } from './stackHeader';
 
 import { ConciergeHomeScreen } from '../screens/ConciergeHomeScreen';
 import { GuestDetailsScreen } from '../screens/GuestDetailsScreen';
@@ -10,8 +10,6 @@ import { WaitingForPaymentScreen } from '../screens/WaitingForPaymentScreen';
 import { TrackRideScreen } from '../screens/TrackRideScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
-
-const SLIDE = { animation: 'slide_from_right' } as const;
 
 export function HomeStack() {
   return (
@@ -27,46 +25,22 @@ export function HomeStack() {
       <Stack.Screen
         name="GuestDetails"
         component={GuestDetailsScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Guest Details" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
+        options={({ navigation }) => stackScreenOptions('Guest details', navigation, 'Book for your guest')}
       />
       <Stack.Screen
         name="ScheduleBooking"
         component={ScheduleBookingScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Schedule Ride" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
+        options={({ navigation }) => stackScreenOptions('Schedule ride', navigation)}
       />
       <Stack.Screen
         name="WaitingForPayment"
         component={WaitingForPaymentScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Payment" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
+        options={({ navigation }) => stackScreenOptions('Awaiting payment', navigation)}
       />
       <Stack.Screen
         name="TrackRide"
         component={TrackRideScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Track Ride" onBack={() => navigation.goBack()} />
-          ),
-          ...SLIDE,
-        })}
+        options={({ navigation }) => stackScreenOptions('Track ride', navigation)}
       />
     </Stack.Navigator>
   );

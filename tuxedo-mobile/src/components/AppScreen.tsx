@@ -5,11 +5,15 @@ import {
   Platform, StyleSheet, ViewStyle, StyleProp,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandTopBar } from './BrandTopBar';
 
 type Props = {
   children: ReactNode;
   keyboardAvoiding?: boolean;
   centerContent?: boolean;
+  /** Driver-style Tuxedo brand bar (tab home screens) */
+  brandHeader?: boolean;
+  brandShowProfile?: boolean;
   /** Set true on stack screens that already have an AppHeader above */
   noTopPad?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
@@ -23,6 +27,8 @@ export function AppScreen({
   children,
   keyboardAvoiding = false,
   centerContent = false,
+  brandHeader = false,
+  brandShowProfile = true,
   noTopPad = false,
   contentStyle,
 }: Props) {
@@ -41,6 +47,9 @@ export function AppScreen({
       bounces={Platform.OS === 'ios'}
       overScrollMode={Platform.OS === 'android' ? 'never' : undefined}
     >
+      {brandHeader ? (
+        <BrandTopBar showRightAction={brandShowProfile ? 'profile' : 'none'} />
+      ) : null}
       {children}
     </ScrollView>
   );

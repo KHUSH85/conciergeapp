@@ -1,23 +1,146 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { MotiView } from 'moti';
-import { Calendar, Clock, Phone, Mail, ChevronRight, ChevronLeft, ArrowRightLeft } from 'lucide-react-native';
-import { GlassCard } from '../components/GlassCard';
+import {
+  Calendar, Clock, Phone, Mail, ChevronRight, ChevronLeft,
+  ArrowRightLeft, CheckCircle2,
+} from 'lucide-react-native';
+import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
 import { AppScreen } from '../components/AppScreen';
+import { TimePickerModal, formatTimeDisplay } from '../components/TimePickerModal';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
+import {
+  format, addMonths, subMonths, startOfMonth, endOfMonth,
+  startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth,
+  isSameDay, isBefore, startOfDay,
+} from 'date-fns';
 
 const GOLD = '#D4AF37';
+const GOLD_FAINT = 'rgba(212,175,55,0.08)';
+const GOLD_DIM = 'rgba(212,175,55,0.25)';
+const BORDER = 'rgba(255,255,255,0.08)';
+const SURFACE = 'rgba(255,255,255,0.04)';
+
+const TYPE = {
+  small: 11,
+  body: 13,
+  title: 15,
+} as const;
+
 type Step = 'guest' | 'schedule' | 'serviceType' | 'confirm';
 const STEPS: Step[] = ['guest', 'schedule', 'serviceType', 'confirm'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
-  visible: boolean; onClose: () => void; onSelect: (date: Date) => void; selected: Date | null;
+const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
+  guest: {
+    title: 'Schedule a Ride',
+    subtitle: 'Tracking link will be sent automatically to the guest.',
+  },
+  schedule: {
+    title: 'Reserve a Ride',
+    subtitle: "Choose the date and time for the guest's ride.",
+  },
+  serviceType: {
+    title: 'Transfer or hourly',
+    subtitle: 'Concierge rides use auto-assign. Manual chauffeur pick is for members in the passenger app only.',
+  },
+  confirm: {
+    title: 'Confirm Booking',
+    subtitle: 'Review and confirm the scheduled ride.',
+  },
+};
+
+function Segment({
+  selected,
+  onSelect,
+  options,
+}: {
+  selected: string;
+  onSelect: (id: string) => void;
+  options: { id: string; label: string; icon: React.ReactNode }[];
+}) {
+  return (
+    <View style={styles.segmentTrack}>
+      {options.map((opt) => {
+        const active = selected === opt.id;
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onSelect(opt.id)}
+            style={({ pressed }) => [
+              styles.segmentBtn,
+              active && styles.segmentBtnActive,
+              pressed && !active && styles.segmentBtnPressed,
+            ]}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+          >
+            {opt.icon}
+            <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{opt.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function StepIndicator({ stepIndex }: { stepIndex: number }) {
+  const progressPct = ((stepIndex + 1) / STEPS.length) * 100;
+  return (
+    <View style={styles.stepIndicator}>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
+      </View>
+      <View style={styles.stepDotsRow}>
+        {STEPS.map((s, i) => {
+          const done = i < stepIndex;
+          const active = i === stepIndex;
+          return (
+            <View
+              key={s}
+              style={[
+                styles.stepDot,
+                done && styles.stepDotDone,
+                active && styles.stepDotActive,
+              ]}
+            >
+              {done ? (
+                <CheckCircle2 color="#000" size={12} strokeWidth={2.5} />
+              ) : (
+                <Text style={[styles.stepDotNum, active && styles.stepDotNumActive]}>
+                  {i + 1}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summaryValue} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const CalendarPicker = ({
+  visible, onClose, onSelect, selected,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (date: Date) => void;
+  selected: Date | null;
 }) => {
   const [viewMonth, setViewMonth] = useState(selected || new Date());
   const today = startOfDay(new Date());
@@ -28,19 +151,21 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={cal.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={cal.container}>
+      <Pressable style={cal.overlay} onPress={onClose}>
+        <Pressable style={cal.container} onPress={(e) => e.stopPropagation()}>
           <View style={cal.header}>
-            <TouchableOpacity onPress={() => setViewMonth(subMonths(viewMonth, 1))} style={cal.navBtn}>
+            <Pressable onPress={() => setViewMonth(subMonths(viewMonth, 1))} style={cal.navBtn}>
               <ChevronLeft color={GOLD} size={20} />
-            </TouchableOpacity>
+            </Pressable>
             <Text style={cal.monthLabel}>{format(viewMonth, 'MMMM yyyy')}</Text>
-            <TouchableOpacity onPress={() => setViewMonth(addMonths(viewMonth, 1))} style={cal.navBtn}>
+            <Pressable onPress={() => setViewMonth(addMonths(viewMonth, 1))} style={cal.navBtn}>
               <ChevronRight color={GOLD} size={20} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <View style={cal.daysRow}>
-            {DAYS.map(d => <Text key={d} style={cal.dayName}>{d}</Text>)}
+            {DAYS.map((d) => (
+              <Text key={d} style={cal.dayName}>{d}</Text>
+            ))}
           </View>
           <View style={cal.grid}>
             {days.map((day, i) => {
@@ -49,22 +174,32 @@ const CalendarPicker = ({ visible, onClose, onSelect, selected }: {
               const isSelected = selected ? isSameDay(day, selected) : false;
               const isToday = isSameDay(day, today);
               return (
-                <TouchableOpacity
+                <Pressable
                   key={i}
                   disabled={isPast || !isCurrentMonth}
                   onPress={() => { onSelect(day); onClose(); }}
-                  style={[cal.dayCell, isSelected && cal.dayCellSelected, isToday && !isSelected && cal.dayCellToday]}
-                  accessibilityRole="button"
+                  style={[
+                    cal.dayCell,
+                    isSelected && cal.dayCellSelected,
+                    isToday && !isSelected && cal.dayCellToday,
+                  ]}
                 >
-                  <Text style={[cal.dayText, !isCurrentMonth && cal.dayTextOther, isPast && cal.dayTextPast, isSelected && cal.dayTextSelected]}>
+                  <Text
+                    style={[
+                      cal.dayText,
+                      !isCurrentMonth && cal.dayTextOther,
+                      isPast && cal.dayTextPast,
+                      isSelected && cal.dayTextSelected,
+                    ]}
+                  >
                     {format(day, 'd')}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
@@ -78,11 +213,15 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDateObj, setSelectedDateObj] = useState<Date | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [serviceType, setServiceType] = useState<'transfer' | 'hourly'>('transfer');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
+
+  const stepIndex = STEPS.indexOf(step);
+  const copy = STEP_COPY[step];
 
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const handleEmailChange = (val: string) => {
@@ -91,13 +230,24 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   };
 
   const canProceedSchedule = selectedDate.length > 0 && selectedTime.length > 0;
-  const canSubmit = contactMethod === 'phone' ? guestPhone.length > 5 : (guestEmail && validateEmail(guestEmail) && !emailError);
+  const canSubmitGuest =
+    contactMethod === 'phone'
+      ? guestPhone.length > 5
+      : Boolean(guestEmail && validateEmail(guestEmail) && !emailError);
 
-  const goNext = () => {
+  const serviceHint =
+    serviceType === 'transfer'
+      ? 'Point A → point B when the guest adds a drop-off.'
+      : 'Timed service from pickup; mileage rules apply in pricing later.';
+
+  const goNext = async () => {
+    await light();
     const idx = STEPS.indexOf(step);
     if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]);
   };
-  const goBack = () => {
+
+  const goBack = async () => {
+    await light();
     const idx = STEPS.indexOf(step);
     if (idx === 0) navigation.goBack();
     else setStep(STEPS[idx - 1]);
@@ -106,7 +256,8 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   const handleRequest = () => {
     const pickup = user?.hotelName || 'The Grand Majestic Hotel';
     const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
-    const scheduledFor = `${selectedDate} · ${selectedTime}`;
+    const timeLabel = formatTimeDisplay(selectedTime);
+    const scheduledFor = `${selectedDate} · ${timeLabel}`;
     addOpenRideRequest({
       guestLabel,
       pickup,
@@ -117,7 +268,7 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
     navigation.navigate('WaitingForPayment', {
       bookingMode: 'scheduled',
       scheduledDate: selectedDate,
-      scheduledTime: selectedTime,
+      scheduledTime: timeLabel,
       guestPhone: contactMethod === 'phone' ? guestPhone : '',
       guestEmail: contactMethod === 'email' ? guestEmail : '',
       pickupLocation: pickup,
@@ -125,266 +276,569 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
     });
   };
 
+  const selectContact = async (method: 'phone' | 'email') => {
+    await light();
+    setContactMethod(method);
+  };
+
   return (
     <AppScreen keyboardAvoiding noTopPad>
-      {/* ── Step indicator ── */}
       <MotiView
-        from={{ opacity: 0, translateY: -8 }}
+        from={{ opacity: 0, translateY: -6 }}
         animate={{ opacity: 1, translateY: 0 }}
         transition={{ type: 'timing', duration: 220, delay: delays.header }}
       >
-        <View style={styles.stepsRow}>
-          {STEPS.map((s, i) => (
-            <View key={s} style={styles.stepItem}>
-              <View style={[styles.stepDot, STEPS.indexOf(step) >= i && styles.stepDotActive]} />
-              {i < STEPS.length - 1 && <View style={styles.stepLine} />}
-            </View>
-          ))}
-        </View>
+        <StepIndicator stepIndex={stepIndex} />
       </MotiView>
 
       <MotiView
         key={step}
-        from={{ opacity: 0, translateY: 16 }}
+        from={{ opacity: 0, translateY: 12 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 260, delay: delays.content }}
+        transition={{ type: 'timing', duration: 240, delay: delays.content }}
       >
-        {step === 'guest' && (
-          <GlassCard style={styles.card}>
-            <Text style={styles.title}>Schedule a Ride</Text>
-            <Text style={styles.subtitle}>Tracking link will be sent automatically to the guest.</Text>
-
-            <MotiView
-              key={contactMethod}
-              from={{ opacity: 0, translateX: contactMethod === 'phone' ? -20 : 20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ type: 'timing', duration: 240 }}
+        <AppCard style={styles.card}>
+          {stepIndex > 0 ? (
+            <Pressable
+              onPress={goBack}
+              style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
             >
-              <AppInput
-                leftSlot={
-                  <View style={styles.inputIcon}>
-                    {contactMethod === 'phone' ? <Phone color={GOLD} size={20} /> : <Mail color={GOLD} size={20} />}
-                  </View>
-                }
-                placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
-                value={contactMethod === 'phone' ? guestPhone : guestEmail}
-                onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
-                keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
-                autoCapitalize="none"
-                containerStyle={styles.inputContainer}
+              <ChevronLeft color={GOLD} size={18} />
+            </Pressable>
+          ) : null}
+
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.subtitle}>{copy.subtitle}</Text>
+
+          {/* Step 1 — Guest */}
+          {step === 'guest' && (
+            <>
+              <Segment
+                selected={contactMethod}
+                onSelect={(id) => selectContact(id as 'phone' | 'email')}
+                options={[
+                  {
+                    id: 'phone',
+                    label: 'Phone',
+                    icon: <Phone color={contactMethod === 'phone' ? GOLD : '#6b7280'} size={15} />,
+                  },
+                  {
+                    id: 'email',
+                    label: 'Email',
+                    icon: <Mail color={contactMethod === 'email' ? GOLD : '#6b7280'} size={15} />,
+                  },
+                ]}
               />
-              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-            </MotiView>
 
-            <TouchableOpacity
-              onPress={async () => { await light(); setContactMethod(contactMethod === 'phone' ? 'email' : 'phone'); }}
-              style={styles.switchBtn}
-            >
-              <Text style={styles.switchText}>
-                {contactMethod === 'phone' ? "No phone? Use Email instead" : 'Use Phone Number instead'}
-              </Text>
-            </TouchableOpacity>
-
-            <AppButton
-              label="Send Ride Request"
-              onPress={goNext}
-              disabled={!canSubmit}
-              haptic="medium"
-              style={styles.ctaBtn}
-            />
-          </GlassCard>
-        )}
-
-        {step === 'schedule' && (
-          <GlassCard style={styles.card}>
-            <Text style={styles.title}>Reserve a Ride</Text>
-            <Text style={styles.subtitle}>Choose the date and time for the guest's ride.</Text>
-
-            <CalendarPicker
-              visible={calendarVisible}
-              onClose={() => setCalendarVisible(false)}
-              selected={selectedDateObj}
-              onSelect={(date) => {
-                setSelectedDateObj(date);
-                setSelectedDate(format(date, 'yyyy-MM-dd'));
-              }}
-            />
-
-            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setCalendarVisible(true)}>
-              <Calendar color={GOLD} size={20} style={styles.inputIconInline} />
-              <Text style={[styles.datePickerText, !selectedDate && { color: '#6b7280' }]}>
-                {selectedDate || 'Select Date'}
-              </Text>
-            </TouchableOpacity>
-
-            <AppInput
-              leftSlot={<View style={styles.inputIcon}><Clock color={GOLD} size={20} /></View>}
-              placeholder="Time (HH:MM)"
-              value={selectedTime}
-              onChangeText={setSelectedTime}
-              containerStyle={styles.inputContainer}
-            />
-
-            {canProceedSchedule && (
               <MotiView
-                from={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                style={styles.summaryBox}
+                key={contactMethod}
+                from={{ opacity: 0, translateY: 6 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ type: 'timing', duration: 180 }}
+                style={styles.fieldBlock}
               >
-                <Text style={styles.summaryLabel}>Scheduled For</Text>
-                <Text style={styles.summaryValue}>{selectedDate} at {selectedTime}</Text>
+                <AppInput
+                  leftSlot={
+                    <View style={styles.inputIcon}>
+                      {contactMethod === 'phone' ? (
+                        <Phone color={GOLD} size={17} />
+                      ) : (
+                        <Mail color={GOLD} size={17} />
+                      )}
+                    </View>
+                  }
+                  placeholder={contactMethod === 'phone' ? 'Guest Phone Number' : 'Guest Email Address'}
+                  value={contactMethod === 'phone' ? guestPhone : guestEmail}
+                  onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
+                  keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
+                  autoCapitalize="none"
+                  containerStyle={styles.inputContainer}
+                />
+                {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
               </MotiView>
-            )}
 
-            <AppButton
-              label="Continue"
-              onPress={goNext}
-              disabled={!canProceedSchedule}
-              haptic="medium"
-              style={styles.ctaBtn}
-            />
-          </GlassCard>
-        )}
+              <Pressable
+                onPress={async () => {
+                  await light();
+                  setContactMethod(contactMethod === 'phone' ? 'email' : 'phone');
+                }}
+                style={({ pressed }) => [styles.switchBtn, pressed && styles.switchBtnPressed]}
+              >
+                <Text style={styles.switchText}>
+                  {contactMethod === 'phone'
+                    ? 'No phone? Use Email instead'
+                    : 'Use Phone Number instead'}
+                </Text>
+              </Pressable>
 
-        {step === 'serviceType' && (
-          <GlassCard style={styles.card}>
-            <Text style={styles.title}>Transfer or hourly</Text>
-            <Text style={styles.subtitle}>Concierge rides use auto-assign. Manual chauffeur pick is for members in the passenger app only.</Text>
+              <AppButton
+                label="Send Ride Request"
+                onPress={goNext}
+                disabled={!canSubmitGuest}
+                haptic="medium"
+                style={styles.ctaBtn}
+              />
+            </>
+          )}
 
-            <TouchableOpacity
-              onPress={async () => {
-                await light();
-                setServiceType('transfer');
-              }}
-              style={[styles.optionBtn, serviceType === 'transfer' && styles.optionBtnActive]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: serviceType === 'transfer' }}
-            >
-              <View style={styles.optionIcon}>
-                <ArrowRightLeft color={GOLD} size={22} />
+          {/* Step 2 — Schedule */}
+          {step === 'schedule' && (
+            <>
+              <CalendarPicker
+                visible={calendarVisible}
+                onClose={() => setCalendarVisible(false)}
+                selected={selectedDateObj}
+                onSelect={(date) => {
+                  setSelectedDateObj(date);
+                  setSelectedDate(format(date, 'yyyy-MM-dd'));
+                }}
+              />
+
+              <Pressable
+                style={({ pressed }) => [styles.datePickerBtn, pressed && styles.datePickerBtnPressed]}
+                onPress={() => setCalendarVisible(true)}
+              >
+                <View style={styles.dateIconWrap}>
+                  <Calendar color={GOLD} size={16} />
+                </View>
+                <Text style={[styles.datePickerText, !selectedDate && styles.datePickerPlaceholder]}>
+                  {selectedDate || 'Select Date'}
+                </Text>
+                <ChevronRight color="rgba(255,255,255,0.25)" size={18} />
+              </Pressable>
+
+              <TimePickerModal
+                visible={timePickerVisible}
+                onClose={() => setTimePickerVisible(false)}
+                selected={selectedTime}
+                onSelect={setSelectedTime}
+              />
+
+              <Pressable
+                style={({ pressed }) => [styles.datePickerBtn, pressed && styles.datePickerBtnPressed]}
+                onPress={() => setTimePickerVisible(true)}
+              >
+                <View style={styles.dateIconWrap}>
+                  <Clock color={GOLD} size={16} />
+                </View>
+                <Text style={[styles.datePickerText, !selectedTime && styles.datePickerPlaceholder]}>
+                  {selectedTime ? formatTimeDisplay(selectedTime) : 'Time (HH:MM)'}
+                </Text>
+                <ChevronRight color="rgba(255,255,255,0.25)" size={18} />
+              </Pressable>
+
+              {canProceedSchedule ? (
+                <MotiView
+                  from={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'timing', duration: 200 }}
+                  style={styles.summaryBox}
+                >
+                  <Text style={styles.summaryBoxLabel}>Scheduled For</Text>
+                  <Text style={styles.summaryBoxValue}>
+                    {selectedDate} at {formatTimeDisplay(selectedTime)}
+                  </Text>
+                </MotiView>
+              ) : null}
+
+              <AppButton
+                label="Continue"
+                onPress={goNext}
+                disabled={!canProceedSchedule}
+                haptic="medium"
+                style={styles.ctaBtn}
+              />
+            </>
+          )}
+
+          {/* Step 3 — Service type */}
+          {step === 'serviceType' && (
+            <>
+              <Segment
+                selected={serviceType}
+                onSelect={async (id) => {
+                  await light();
+                  setServiceType(id as 'transfer' | 'hourly');
+                }}
+                options={[
+                  {
+                    id: 'transfer',
+                    label: 'Transfer',
+                    icon: <ArrowRightLeft color={serviceType === 'transfer' ? GOLD : '#6b7280'} size={16} />,
+                  },
+                  {
+                    id: 'hourly',
+                    label: 'Hourly',
+                    icon: <Clock color={serviceType === 'hourly' ? GOLD : '#6b7280'} size={16} />,
+                  },
+                ]}
+              />
+              <Text style={styles.segmentHint}>{serviceHint}</Text>
+
+              <AppButton label="Continue" onPress={goNext} haptic="medium" style={styles.ctaBtn} />
+            </>
+          )}
+
+          {/* Step 4 — Confirm */}
+          {step === 'confirm' && (
+            <>
+              <View style={styles.confirmCard}>
+                <SummaryRow
+                  label="Service"
+                  value={serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}
+                />
+                <View style={styles.confirmDivider} />
+                <SummaryRow
+                  label="Scheduled ride"
+                  value={`${selectedDate} at ${formatTimeDisplay(selectedTime)}`}
+                />
               </View>
-              <View style={styles.optionInfo}>
-                <Text style={styles.optionTitle}>Transfer</Text>
-                <Text style={styles.optionDesc}>Point A → point B when the guest adds a drop-off.</Text>
-              </View>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={async () => {
-                await light();
-                setServiceType('hourly');
-              }}
-              style={[styles.optionBtn, serviceType === 'hourly' && styles.optionBtnActive]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: serviceType === 'hourly' }}
-            >
-              <View style={styles.optionIcon}>
-                <Clock color={GOLD} size={22} />
-              </View>
-              <View style={styles.optionInfo}>
-                <Text style={styles.optionTitle}>Hourly</Text>
-                <Text style={styles.optionDesc}>Timed service from pickup; mileage rules apply in pricing later.</Text>
-              </View>
-            </TouchableOpacity>
-
-            <AppButton label="Continue" onPress={goNext} haptic="medium" style={styles.ctaBtn} />
-          </GlassCard>
-        )}
-
-        {step === 'confirm' && (
-          <GlassCard style={styles.card}>
-            <Text style={styles.title}>Confirm Booking</Text>
-            <Text style={styles.subtitle}>Review and confirm the scheduled ride.</Text>
-
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>Service</Text>
-              <Text style={styles.summaryValue}>{serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}</Text>
-            </View>
-
-            <View style={[styles.summaryBox, { marginTop: 10 }]}>
-              <Text style={styles.summaryLabel}>Scheduled ride</Text>
-              <Text style={styles.summaryValue}>
-                {selectedDate} at {selectedTime}
-              </Text>
-            </View>
-
-            <AppButton
-              label="Confirm Booking"
-              onPress={handleRequest}
-              haptic="success"
-              style={styles.ctaBtn}
-            />
-          </GlassCard>
-        )}
+              <AppButton
+                label="Confirm Booking"
+                onPress={handleRequest}
+                haptic="success"
+                style={styles.ctaBtn}
+              />
+            </>
+          )}
+        </AppCard>
       </MotiView>
     </AppScreen>
   );
 };
 
 const styles = StyleSheet.create({
-  stepsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  stepItem: { flexDirection: 'row', alignItems: 'center' },
-  stepDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#374151' },
-  stepDotActive: { backgroundColor: GOLD },
-  stepLine: { width: 24, height: 1, backgroundColor: '#374151', marginHorizontal: 4 },
-  card: { padding: 24 },
-  title: { fontSize: 20, color: '#fff', fontWeight: '700', marginBottom: 6 },
-  subtitle: { fontSize: 13, color: '#9ca3af', fontWeight: '500', marginBottom: 20 },
-  inputIcon: { paddingLeft: 14, paddingRight: 4 },
-  inputIconInline: { marginRight: 10 },
-  inputContainer: { marginBottom: 14 },
+  stepIndicator: {
+    marginBottom: 14,
+  },
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: GOLD,
+    borderRadius: 2,
+  },
+  stepDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  stepDotDone: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  stepDotNum: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stepDotNumActive: {
+    color: '#000',
+  },
+
+  card: {
+    padding: 14,
+    paddingTop: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  backBtnPressed: {
+    opacity: 0.88,
+  },
+  title: {
+    fontSize: TYPE.title,
+    color: '#fff',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: TYPE.small,
+    color: 'rgba(255,255,255,0.45)',
+    fontWeight: '500',
+    lineHeight: 16,
+    marginBottom: 14,
+  },
+
+  segmentTrack: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 4,
+    marginBottom: 12,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  segmentBtnActive: {
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+  },
+  segmentBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  segmentLabel: {
+    color: '#6b7280',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  segmentLabelActive: {
+    color: GOLD,
+  },
+  segmentHint: {
+    fontSize: TYPE.small,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 14,
+  },
+
+  fieldBlock: {
+    marginTop: 0,
+  },
+  inputIcon: {
+    paddingLeft: 12,
+    paddingRight: 4,
+  },
+  inputContainer: {
+    marginBottom: 0,
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: TYPE.small,
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  switchBtn: {
+    marginTop: 12,
+    marginBottom: 14,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  switchBtnPressed: {
+    opacity: 0.85,
+  },
+  switchText: {
+    color: GOLD,
+    fontWeight: '700',
+    fontSize: TYPE.body,
+  },
+
   datePickerBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 14, marginBottom: 14, minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 10,
+    minHeight: 56,
   },
-  datePickerText: { color: '#fff', fontSize: 15, fontWeight: '500', flex: 1 },
+  datePickerBtnPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  dateIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  datePickerText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  datePickerPlaceholder: {
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+
   summaryBox: {
-    backgroundColor: 'rgba(212,175,55,0.08)', borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)', borderRadius: 12, padding: 14, marginBottom: 20,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 14,
   },
-  summaryLabel: { color: GOLD, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  summaryValue: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  ctaBtn: { width: '100%', marginTop: 4 },
-  optionBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.2)', borderRadius: 14, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 2,
+  summaryBoxLabel: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 4,
   },
-  optionBtnActive: { borderColor: GOLD, backgroundColor: 'rgba(212,175,55,0.08)' },
-  optionIcon: {
-    padding: 10, borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.2)', marginRight: 14,
+  summaryBoxValue: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: TYPE.body,
   },
-  optionInfo: { flex: 1 },
-  optionTitle: { color: '#fff', fontWeight: '700', fontSize: 15, marginBottom: 2 },
-  optionDesc: { color: '#9ca3af', fontSize: 13, fontWeight: '500' },
-  errorText: { color: '#f87171', fontSize: 12, marginBottom: 8, marginLeft: 4 },
-  switchBtn: { marginBottom: 20, minHeight: 44, justifyContent: 'center' },
-  switchText: { color: GOLD, fontWeight: '700', fontSize: 13 },
+
+  confirmCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: SURFACE,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginBottom: 14,
+  },
+  summaryRow: {
+    paddingVertical: 10,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  summaryValue: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: TYPE.body,
+    lineHeight: 18,
+  },
+  confirmDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: BORDER,
+  },
+
+  ctaBtn: {
+    width: '100%',
+  },
 });
 
 const cal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  container: {
-    backgroundColor: '#1a1a2e', borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.4)', borderRadius: 16, padding: 16, width: '100%',
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  navBtn: { padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  monthLabel: { color: '#fff', fontWeight: '900', fontSize: 16 },
-  daysRow: { flexDirection: 'row', marginBottom: 8 },
-  dayName: { flex: 1, textAlign: 'center', color: GOLD, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  dayCell: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', borderRadius: 8 },
-  dayCellSelected: { backgroundColor: GOLD },
-  dayCellToday: { borderWidth: 1, borderColor: GOLD },
-  dayText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  dayTextOther: { color: '#374151' },
-  dayTextPast: { color: '#374151' },
-  dayTextSelected: { color: '#000', fontWeight: '900' },
+  container: {
+    backgroundColor: '#0a0a0a',
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderRadius: 16,
+    padding: 14,
+    width: '100%',
+    maxWidth: 360,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  navBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: GOLD_FAINT,
+  },
+  monthLabel: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: TYPE.title,
+  },
+  daysRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  dayName: {
+    flex: 1,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: TYPE.small,
+    fontWeight: '600',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  dayCellSelected: {
+    backgroundColor: GOLD,
+  },
+  dayCellToday: {
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+  },
+  dayText: {
+    color: '#fff',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  dayTextOther: {
+    color: '#374151',
+  },
+  dayTextPast: {
+    color: '#374151',
+  },
+  dayTextSelected: {
+    color: '#000',
+    fontWeight: '800',
+  },
 });

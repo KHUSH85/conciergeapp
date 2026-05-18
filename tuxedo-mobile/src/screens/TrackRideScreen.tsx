@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
   MapPin, Navigation, Car, CheckCircle2, Crown, Wallet,
-  ArrowRight, ArrowLeft, Sparkles, Lock, Gift, User,
+  ArrowRight, Sparkles, Lock, Gift, User,
   CreditCard, DollarSign, Apple,
 } from 'lucide-react-native';
 import { GlassCard } from '../components/GlassCard';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
 import { AppScreen } from '../components/AppScreen';
+import { AppHeader } from '../components/AppHeader';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
@@ -104,40 +105,31 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
     setStep('tracking');
   };
 
-  const handleBack = async () => {
-    await light();
+  const handleBack = useCallback(() => {
     if (step === 'tracking') { setStep('payment'); return; }
     if (step === 'payment')  { setStep('config');  return; }
     navigation.goBack();
-  };
+  }, [step, navigation]);
+
+  const headerSubtitle =
+    step === 'tracking' ? 'Chauffeur en route' :
+    step === 'payment' ? 'Select payment' :
+    'Ride configuration';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      header: () => (
+        <AppHeader title="Track ride" subtitle={headerSubtitle} onBack={handleBack} />
+      ),
+    });
+  }, [navigation, headerSubtitle, handleBack]);
 
   const etaMins = Math.floor(Math.random() * 2) + 2;
 
   return (
     <>
-      <AppScreen keyboardAvoiding>
-        <MotiView
-          from={{ opacity: 0, translateY: -12 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: 'timing', duration: 240, delay: delays.header }}
-          style={styles.headerSection}
-        >
-          <TouchableOpacity onPress={handleBack} style={styles.backBtn} accessibilityRole="button">
-            <ArrowLeft color={GOLD} size={18} />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.appTitle}>Tuxedo Concierge</Text>
-            <View style={styles.statusBadge}>
-              <MotiView from={{ opacity: 0.4 }} animate={{ opacity: 1 }} transition={{ type: 'timing', duration: 1000, loop: true }}>
-                <Navigation color={GOLD} size={14} />
-              </MotiView>
-              <Text style={styles.statusText}>
-                {step === 'tracking' ? 'CHAUFFEUR EN ROUTE' : 'RIDE CONFIGURATION'}
-              </Text>
-            </View>
-          </View>
-        </MotiView>
+      <AppScreen keyboardAvoiding noTopPad>
 
         {step === 'config' && (
           <MotiView
@@ -335,18 +327,6 @@ const AppDownloadPopup = ({ visible, user, onClose }: { visible: boolean; user: 
 };
 
 const styles = StyleSheet.create({
-  headerSection: { marginBottom: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16, minHeight: 44 },
-  backText: { color: GOLD, fontWeight: '700', fontSize: 14 },
-  headerCenter: { alignItems: 'center' },
-  appTitle: { fontSize: 22, color: '#fff', fontWeight: '800', textTransform: 'uppercase', fontStyle: 'italic', marginBottom: 8 },
-  statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 14, paddingVertical: 6,
-    backgroundColor: 'rgba(212,175,55,0.12)', borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)', borderRadius: 50,
-  },
-  statusText: { color: GOLD, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   card: { padding: 24, marginBottom: 16 },
   cardTitle: { fontSize: 20, color: '#fff', fontWeight: '800', textTransform: 'uppercase', fontStyle: 'italic', marginBottom: 20 },
   pickupBox: {

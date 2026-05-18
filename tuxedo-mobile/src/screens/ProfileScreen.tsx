@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { User, Crown, Shield, Smartphone, Mail, Phone, Building2 } from 'lucide-react-native';
@@ -29,7 +29,7 @@ export const ProfileScreen = ({ navigation }: any) => {
     : '#f59e0b';
 
   return (
-    <AppScreen>
+    <AppScreen brandHeader brandShowProfile={false}>
       {/* ── Avatar + name ── */}
       <MotiView
         from={{ opacity: 0, translateY: 16 }}

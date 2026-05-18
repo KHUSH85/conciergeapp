@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Modal, FlatList,
@@ -11,6 +11,7 @@ import { AppInput } from '../components/AppInput';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { useSplashVisible } from '../context/SplashContext';
 import { loadMembershipState } from '../utils/appStorage';
 import { isUserOnboarded } from './FirstTimeSetupScreen';
 
@@ -147,7 +148,15 @@ const PhoneStep: React.FC<PhoneStepProps> = ({
   phone, setPhone, country, setCountry, role, setRole, onContinue, loading,
 }) => {
   const { light } = useHaptics();
+  const splashVisible = useSplashVisible();
+  const phoneRef = useRef<TextInput>(null);
   const isValid = phone.replace(/\D/g, '').length >= 7;
+
+  useEffect(() => {
+    if (splashVisible) return;
+    const timer = setTimeout(() => phoneRef.current?.focus(), 280);
+    return () => clearTimeout(timer);
+  }, [splashVisible]);
 
   return (
     <MotiView
@@ -175,13 +184,14 @@ const PhoneStep: React.FC<PhoneStepProps> = ({
 
       <Text style={styles.fieldLabel}>Phone number</Text>
       <AppInput
+        ref={phoneRef}
         containerStyle={styles.phoneInputContainer}
         leftSlot={<CountryPicker selected={country} onSelect={setCountry} />}
         value={phone}
         onChangeText={setPhone}
         placeholder="Enter your number"
         keyboardType="phone-pad"
-        autoFocus
+        showSoftInputOnFocus={!splashVisible}
         maxLength={15}
         onSubmitEditing={isValid ? onContinue : undefined}
         returnKeyType="done"

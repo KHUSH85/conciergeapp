@@ -53,7 +53,7 @@ export const DriverAssignmentModeScreen = ({ navigation }: any) => {
         transition={{ type: 'timing', duration: 260, delay: delays.content }}
       >
         <GlassCard style={styles.card}>
-          <Text style={styles.title}>Select Driver Assignment Mode</Text>
+          <Text style={styles.title}>Select Chauffeur Assignment Mode</Text>
           <Text style={styles.subtitle}>Choose how you'd like to assign a chauffeur</Text>
           {modes.map(({ id, title, desc, icon: Icon, screen }, i) => (
             <MotiView
@@ -150,7 +150,7 @@ export const DriverListScreen = ({ navigation, route }: any) => {
           {fromTrackRide && (
             <Text style={styles.trackRideHint}>Gold member — pick your chauffeur to continue to live tracking</Text>
           )}
-          <Text style={styles.subtitle}>{filtered.length} driver{filtered.length !== 1 ? 's' : ''} found for your schedule</Text>
+          <Text style={styles.subtitle}>{filtered.length} chauffeur{filtered.length !== 1 ? 's' : ''} found for your schedule</Text>
 
           {showFilters && isMember && (
             <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.filtersBox}>
@@ -450,7 +450,7 @@ export const DriverSwipeScreen = ({ navigation }: any) => {
           onPress={async () => { await medium(); navigation.navigate('DriverConfirmation', { driver }); }}
           style={styles.swipeSelectBtn}
           accessibilityRole="button"
-          accessibilityLabel="Select driver"
+          accessibilityLabel="Select chauffeur"
         >
           <Check color="#000" size={28} />
         </TouchableOpacity>

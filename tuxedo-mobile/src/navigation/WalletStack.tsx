@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { WalletStackParamList } from './types';
-import { AppHeader } from '../components/AppHeader';
+import { stackScreenOptions } from './stackHeader';
 
 import { CommissionWalletScreen } from '../screens/CommissionWalletScreen';
 import { MembershipScreen, MembershipPaymentScreen } from '../screens/MembershipScreens';
@@ -21,24 +21,12 @@ export function WalletStack() {
       <Stack.Screen
         name="Membership"
         component={MembershipScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Membership" onBack={() => navigation.goBack()} />
-          ),
-          animation: 'slide_from_right',
-        })}
+        options={({ navigation }) => stackScreenOptions('Membership', navigation)}
       />
       <Stack.Screen
         name="MembershipPayment"
         component={MembershipPaymentScreen}
-        options={({ navigation }) => ({
-          headerShown: true,
-          header: () => (
-            <AppHeader title="Membership Payment" onBack={() => navigation.goBack()} />
-          ),
-          animation: 'slide_from_right',
-        })}
+        options={({ navigation }) => stackScreenOptions('Membership payment', navigation)}
       />
     </Stack.Navigator>
   );

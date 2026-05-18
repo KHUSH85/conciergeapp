@@ -1,23 +1,22 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppProvider, useApp } from './src/context/AppContext';
-import * as SplashScreen from 'expo-splash-screen';
+import { SplashProvider } from './src/context/SplashContext';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 
 import { SplashScreenComponent } from './src/screens/SplashScreen';
 import { AuthNavigator, MainNavigator } from './src/navigation/RootNavigator';
 
 enableScreens();
-SplashScreen.preventAutoHideAsync();
+ExpoSplashScreen.preventAutoHideAsync();
 
-// Inner component so it can access AppContext via useApp
 function AppNavigator() {
   const { user } = useApp();
-  // key forces NavigationContainer to fully remount when auth state changes,
-  // preventing the internal REPLACE {name:"Home"} dispatch on the wrong navigator.
   return (
     <NavigationContainer key={user ? 'main' : 'auth'}>
       <StatusBar style="light" />
@@ -27,39 +26,51 @@ function AppNavigator() {
 }
 
 export default function App() {
-  const [appReady, setAppReady] = useState(false);
   const [showJsSplash, setShowJsSplash] = useState(true);
+  const nativeSplashHidden = useRef(false);
 
-  const onLayoutRootView = useCallback(async () => {
-    if (appReady) await SplashScreen.hideAsync();
-  }, [appReady]);
-
-  useEffect(() => {
-    setAppReady(true);
+  const onRootLayout = useCallback(async () => {
+    if (nativeSplashHidden.current) return;
+    nativeSplashHidden.current = true;
+    await ExpoSplashScreen.hideAsync();
   }, []);
 
   const handleSplashFinish = useCallback(() => {
     setShowJsSplash(false);
   }, []);
 
-  if (!appReady) return null;
-
-  if (showJsSplash) {
-    return (
-      <SafeAreaProvider onLayout={onLayoutRootView}>
-        <StatusBar style="light" />
-        <SplashScreenComponent onFinish={handleSplashFinish} />
-      </SafeAreaProvider>
-    );
-  }
+  useEffect(() => {
+    if (showJsSplash) Keyboard.dismiss();
+  }, [showJsSplash]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProvider>
-          <AppNavigator />
-        </AppProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider onLayout={onRootLayout}>
+        <StatusBar style="light" />
+        <SplashProvider visible={showJsSplash}>
+          <AppProvider>
+            <AppNavigator />
+            {showJsSplash ? (
+              <View style={styles.splashOverlay}>
+                <SplashScreenComponent onFinish={handleSplashFinish} />
+              </View>
+            ) : null}
+          </AppProvider>
+        </SplashProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  splashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
+    elevation: 1000,
+    backgroundColor: '#000000',
+  },
+});

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Star, MapPin, Shield, CheckCircle2, Award, Clock } from 'lucide-react-native';
@@ -130,7 +130,7 @@ export const DriverConfirmationScreen = ({ navigation, route }: any) => {
           style={styles.confirmBtn}
         />
         <AppButton
-          label="Choose Different Driver"
+          label="Choose Different Chauffeur"
           onPress={() => navigation.goBack()}
           variant="secondary"
           haptic="light"

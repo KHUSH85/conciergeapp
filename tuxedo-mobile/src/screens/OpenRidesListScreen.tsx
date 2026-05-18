@@ -4,6 +4,7 @@ import { MotiView } from 'moti';
 import { MapPin, Clock, Navigation, ChevronRight, Car } from 'lucide-react-native';
 import { AppCard } from '../components/AppCard';
 import { AppScreen } from '../components/AppScreen';
+import { SectionHeader } from '../components/SectionHeader';
 import { useHaptics } from '../hooks/useHaptics';
 import { useApp } from '../context/AppContext';
 import type { OpenRideRequest } from '../types';
@@ -37,18 +38,11 @@ export const OpenRidesListScreen = ({ navigation }: any) => {
   const { light } = useHaptics();
 
   return (
-    <AppScreen noTopPad>
-      <MotiView
-        from={{ opacity: 0, translateY: -8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220 }}
-        style={styles.intro}
-      >
-        <Text style={styles.title}>Active rides</Text>
-        <Text style={styles.sub}>
-          Open requests you sent — track status and map per guest. Book another anytime from Home.
-        </Text>
-      </MotiView>
+    <AppScreen brandHeader>
+      <SectionHeader
+        title="Active rides"
+        subtitle="Open requests you sent — track status and map per guest."
+      />
 
       <TouchableOpacity
         onPress={async () => {
@@ -132,9 +126,6 @@ export const OpenRidesListScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  intro: { marginBottom: 14 },
-  title: { fontSize: 22, color: '#fff', fontWeight: '800', marginBottom: 6 },
-  sub: { fontSize: 13, color: '#9ca3af', lineHeight: 20, fontWeight: '500' },
   historyLink: {
     flexDirection: 'row',
     alignItems: 'center',

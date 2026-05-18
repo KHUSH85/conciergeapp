@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Star, Car, Clock } from 'lucide-react-native';
@@ -35,7 +35,7 @@ export const RideHistoryScreen = () => {
   const delays = useStaggerAnimation();
 
   return (
-    <AppScreen>
+    <AppScreen noTopPad>
       {/* ── Summary strip ── */}
       <MotiView
         from={{ opacity: 0, translateY: 12 }}
