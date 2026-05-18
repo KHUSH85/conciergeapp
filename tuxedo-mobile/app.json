@@ -26,7 +26,10 @@
       "expo-router"
     ],
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "7c15ec5b-7cc2-447d-885a-0b83424e2182"
+      }
     },
     "ios": {
       "supportsTablet": true,
