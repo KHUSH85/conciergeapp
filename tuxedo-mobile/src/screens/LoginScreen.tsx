@@ -6,6 +6,7 @@ import {
 import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
 import { AppScreen } from '../components/AppScreen';
+import { TuxedoLogo } from '../components/TuxedoLogo';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
 import { useHaptics } from '../hooks/useHaptics';
@@ -419,10 +420,7 @@ export const LoginScreen = ({ navigation }: any) => {
         transition={{ type: 'timing', duration: 280, delay: delays.header }}
         style={styles.logoArea}
       >
-        <View style={styles.logoRing}>
-          <Text style={styles.logoMark}>T</Text>
-        </View>
-        <Text style={styles.brandName}>TUXEDO</Text>
+        <TuxedoLogo variant="light" width={280} height={82} />
         <Text style={styles.tagline}>Premium Chauffeur Service</Text>
       </MotiView>
 
@@ -461,16 +459,8 @@ export const LoginScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   scroll: { paddingTop: 32, paddingBottom: 40 },
-  logoArea: { alignItems: 'center', marginBottom: 32 },
-  logoRing: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 1, borderColor: GOLD_DIM,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: GOLD_FAINT, marginBottom: 16,
-  },
-  logoMark: { fontSize: 38, fontWeight: '200', color: GOLD, letterSpacing: 2, lineHeight: 44 },
-  brandName: { fontSize: 26, fontWeight: '300', color: WHITE, letterSpacing: 10, marginBottom: 6 },
-  tagline: { fontSize: 12, color: GREY_LIGHT, letterSpacing: 2, fontWeight: '400' },
+  logoArea: { alignItems: 'center', marginBottom: 24, gap: 12, paddingTop: 8 },
+  tagline: { fontSize: 12, color: GREY_LIGHT, letterSpacing: 2, fontWeight: '400', marginTop: 4 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: BORDER, marginBottom: 32 },
   form: { flex: 1 },
   fieldLabel: {

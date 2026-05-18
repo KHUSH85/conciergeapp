@@ -1,17 +1,19 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { User } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { LOGO_SIZES, TuxedoLogo } from './TuxedoLogo';
 
 const GOLD = '#D4AF37';
+const SIDE = 44;
 
 type Props = {
   onProfilePress?: () => void;
   showRightAction?: 'profile' | 'none';
 };
 
-/** Centered Tuxedo brand row — same pattern as driver app home header. */
+/** Tab screens — large centered logo, profile on the right (no back on tab roots). */
 export function BrandTopBar({ onProfilePress, showRightAction = 'profile' }: Props) {
   const navigation = useNavigation<any>();
 
@@ -31,13 +33,10 @@ export function BrandTopBar({ onProfilePress, showRightAction = 'profile' }: Pro
 
   return (
     <View style={styles.row}>
-      <View style={styles.side}>
-        <View style={styles.sideSpacer} />
-      </View>
+      <View style={styles.side} />
 
       <View style={styles.center}>
-        <Text style={styles.brand}>Tuxedo</Text>
-        <Text style={styles.brandTag}>Concierge App</Text>
+        <TuxedoLogo variant="light" {...LOGO_SIZES.header} />
       </View>
 
       <View style={styles.side}>
@@ -62,44 +61,31 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 10,
+    minHeight: 58,
   },
   side: {
-    width: 44,
+    width: SIDE,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sideSpacer: {
-    width: 44,
-    height: 44,
+    width: SIDE,
+    height: SIDE,
   },
   center: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  brand: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 18,
-    letterSpacing: -0.2,
-  },
-  brandTag: {
-    marginTop: 3,
-    color: GOLD,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    opacity: 0.85,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   iconBtn: {
-    width: 42,
-    height: 42,
+    width: SIDE,
+    height: SIDE,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.22)',
-    backgroundColor: 'rgba(212,175,55,0.08)',
+    borderColor: 'rgba(212,175,55,0.35)',
+    backgroundColor: 'rgba(212,175,55,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },

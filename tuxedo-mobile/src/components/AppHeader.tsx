@@ -1,8 +1,9 @@
 import React, { ReactNode } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { LOGO_SIZES, TuxedoLogo } from './TuxedoLogo';
 
 const GOLD = '#D4AF37';
 
@@ -11,12 +12,13 @@ interface AppHeaderProps {
   subtitle?: string;
   onBack?: () => void;
   rightAction?: ReactNode;
+  showLogo?: boolean;
 }
 
 /**
- * Stack screen header — back button, title, optional subtitle (driver app style).
+ * Stack screens — back button fixed top-left; logo + title in the center column.
  */
-export function AppHeader({ title, subtitle, onBack, rightAction }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, rightAction, showLogo = true }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const extraTop = Platform.OS === 'ios' ? 4 : 8;
 
@@ -28,24 +30,26 @@ export function AppHeader({ title, subtitle, onBack, rightAction }: AppHeaderPro
   return (
     <View style={[styles.container, { paddingTop: insets.top + extraTop }]}>
       <View style={styles.row}>
-        <View style={styles.side}>
+        <View style={styles.leftSlot}>
           {onBack ? (
             <Pressable
               onPress={handleBack}
               style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
               accessibilityLabel="Go back"
               accessibilityRole="button"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <ArrowLeft color="rgba(255,255,255,0.85)" size={20} />
+              <ChevronLeft color="#000000" size={26} strokeWidth={2.5} />
             </Pressable>
           ) : (
-            <View style={styles.backSpacer} />
+            <View style={styles.backPlaceholder} />
           )}
         </View>
 
-        <View style={styles.center}>
-          <Text style={styles.title} numberOfLines={1}>
+        <View style={styles.centerCol}>
+          {showLogo ? (
+            <TuxedoLogo variant="light" {...LOGO_SIZES.stackHeader} containerStyle={styles.headerLogo} />
+          ) : null}
+          <Text style={[styles.title, showLogo && styles.titleWithLogo]} numberOfLines={1}>
             {title}
           </Text>
           {!!subtitle && (
@@ -55,8 +59,8 @@ export function AppHeader({ title, subtitle, onBack, rightAction }: AppHeaderPro
           )}
         </View>
 
-        <View style={[styles.side, styles.sideRight]}>
-          {rightAction ?? <View style={styles.backSpacer} />}
+        <View style={styles.rightSlot}>
+          {rightAction ?? <View style={styles.backPlaceholder} />}
         </View>
       </View>
       <View style={styles.divider} />
@@ -64,48 +68,68 @@ export function AppHeader({ title, subtitle, onBack, rightAction }: AppHeaderPro
   );
 }
 
+const SLOT = 48;
+
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#000',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingBottom: 0,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 48,
+    alignItems: 'flex-start',
+    minHeight: 62,
     paddingBottom: 10,
   },
-  side: {
-    width: 52,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+  leftSlot: {
+    width: SLOT,
+    paddingTop: 4,
+    flexShrink: 0,
   },
-  sideRight: {
+  rightSlot: {
+    width: SLOT,
+    paddingTop: 4,
     alignItems: 'flex-end',
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 4,
+    flexShrink: 0,
   },
   backBtn: {
-    width: 44,
-    height: 44,
+    width: SLOT,
+    height: SLOT,
     borderRadius: 14,
+    backgroundColor: GOLD,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.22)',
-    backgroundColor: 'rgba(212,175,55,0.08)',
+    borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: GOLD,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 8,
   },
   backBtnPressed: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    transform: [{ scale: 0.96 }],
+    opacity: 0.9,
+    transform: [{ scale: 0.94 }],
   },
-  backSpacer: {
-    width: 44,
-    height: 44,
+  backPlaceholder: {
+    width: SLOT,
+    height: SLOT,
+  },
+  centerCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 2,
+    paddingHorizontal: 4,
+    minWidth: 0,
+  },
+  headerLogo: {
+    marginBottom: 4,
+  },
+  titleWithLogo: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   title: {
     color: '#FFFFFF',
@@ -117,7 +141,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 2,
     color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
   },

@@ -1,12 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LOGO_SIZES, TuxedoLogo } from '../components/TuxedoLogo';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const GOLD = '#D4AF37';
-const GOLD_SHINE = '#F7E29F';
-const BADGE_SIZE = 120;
-
 interface SplashScreenProps {
   onFinish: () => void;
 }
@@ -141,8 +139,8 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
 
         <Animated.View
           style={[
-            styles.badgeWrap,
-            { transform: [{ scale: logoScale }, { rotate: rotateDeg }] },
+            styles.logoWrap,
+            { opacity: brandOpacity, transform: [{ scale: logoScale }, { rotate: rotateDeg }, { translateY: brandY }] },
           ]}
         >
           <Animated.View
@@ -150,33 +148,10 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
               styles.badgeRing,
               { opacity: ringOpacity, transform: [{ scale: ringScale }] },
             ]}
+            pointerEvents="none"
           />
-
-          <LinearGradient
-            colors={['rgba(212,175,55,0.18)', 'rgba(212,175,55,0.06)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.badge}
-          >
-            <Animated.View
-              style={[
-                styles.shimmer,
-                { transform: [{ translateX: shimmerX }, { rotate: '25deg' }] },
-              ]}
-              pointerEvents="none"
-            />
-            <Text style={styles.monogram}>T</Text>
-          </LinearGradient>
+          <TuxedoLogo variant="light" {...LOGO_SIZES.splash} />
         </Animated.View>
-
-        <Animated.Text
-          style={[
-            styles.brandName,
-            { opacity: brandOpacity, transform: [{ translateY: brandY }] },
-          ]}
-        >
-          TUXEDO
-        </Animated.Text>
 
         <Animated.View
           style={[
@@ -249,73 +224,28 @@ const styles = StyleSheet.create({
   },
   halo: {
     position: 'absolute',
-    width: BADGE_SIZE + 60,
-    height: BADGE_SIZE + 60,
-    borderRadius: (BADGE_SIZE + 60) / 2,
+    width: LOGO_SIZES.splash.width + 48,
+    height: LOGO_SIZES.splash.height + 48,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: GOLD,
   },
-  badgeWrap: {
-    width: BADGE_SIZE,
-    height: BADGE_SIZE,
+  logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 8,
+    paddingVertical: 8,
   },
   badgeRing: {
     position: 'absolute',
-    width: BADGE_SIZE,
-    height: BADGE_SIZE,
-    borderRadius: BADGE_SIZE / 2,
-    borderWidth: 1.5,
-    borderColor: GOLD,
-    shadowColor: GOLD,
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  badge: {
-    width: BADGE_SIZE,
-    height: BADGE_SIZE,
-    borderRadius: BADGE_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: LOGO_SIZES.splash.width + 24,
+    height: LOGO_SIZES.splash.height + 24,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.35)',
-    overflow: 'hidden',
-    shadowColor: GOLD,
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  shimmer: {
-    position: 'absolute',
-    width: 40,
-    height: BADGE_SIZE * 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    top: -BADGE_SIZE / 2,
-  },
-  monogram: {
-    fontSize: 52,
-    fontWeight: '200',
-    color: GOLD,
-    letterSpacing: 4,
-    lineHeight: 60,
-    textShadowColor: GOLD_SHINE,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  brandName: {
-    fontSize: 30,
-    fontWeight: '300',
-    color: GOLD,
-    letterSpacing: 12,
-    textAlign: 'center',
   },
   tagWrap: {
-    marginTop: 6,
+    marginTop: 20,
   },
   tagline: {
     fontSize: 12,

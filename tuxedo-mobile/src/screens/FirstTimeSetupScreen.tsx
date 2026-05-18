@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -6,6 +6,7 @@ import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppScreen } from '../components/AppScreen';
+import { LOGO_SIZES, TuxedoLogo } from '../components/TuxedoLogo';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
 import { useHaptics } from '../hooks/useHaptics';
@@ -146,9 +147,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
         transition={{ type: 'timing', duration: 280, delay: delays.header, easing: Easing.out(Easing.quad) }}
         style={styles.header}
       >
-        <View style={styles.logoRing}>
-          <Text style={styles.logoMark}>T</Text>
-        </View>
+        <TuxedoLogo variant="light" {...LOGO_SIZES.auth} />
         <Text style={styles.title}>Complete Your Profile</Text>
         <Text style={styles.subtitle}>Set up your concierge account</Text>
       </MotiView>
@@ -217,14 +216,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
 
 const styles = StyleSheet.create({
   scroll: { paddingTop: 48, paddingBottom: 48 },
-  header: { alignItems: 'center', marginBottom: 36 },
-  logoRing: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 1, borderColor: GOLD_DIM,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: GOLD_FAINT, marginBottom: 24,
-  },
-  logoMark: { fontSize: 36, fontWeight: '200', color: GOLD, lineHeight: 42 },
+  header: { alignItems: 'center', marginBottom: 32, gap: 16 },
   title:    { fontSize: 24, fontWeight: '300', color: WHITE, marginBottom: 8 },
   subtitle: { fontSize: 14, color: GREY_LIGHT, fontWeight: '400' },
   divider: {
