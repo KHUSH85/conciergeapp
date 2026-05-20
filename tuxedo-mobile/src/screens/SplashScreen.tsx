@@ -5,6 +5,7 @@ import { LOGO_SIZES, TuxedoLogo } from '../components/TuxedoLogo';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const GOLD = '#D4AF37';
+const SPLASH_MIN_MS = 4000;
 interface SplashScreenProps {
   onFinish: () => void;
 }
@@ -13,17 +14,12 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
   const masterFade = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoRotate = useRef(new Animated.Value(-12)).current;
-  const ringScale = useRef(new Animated.Value(1)).current;
-  const ringOpacity = useRef(new Animated.Value(0.5)).current;
-  const haloScale = useRef(new Animated.Value(0.8)).current;
-  const haloOpacity = useRef(new Animated.Value(0)).current;
   const brandY = useRef(new Animated.Value(18)).current;
   const brandOpacity = useRef(new Animated.Value(0)).current;
   const tagY = useRef(new Animated.Value(14)).current;
   const tagOpacity = useRef(new Animated.Value(0)).current;
   const dividerW = useRef(new Animated.Value(0)).current;
   const subOpacity = useRef(new Animated.Value(0)).current;
-  const shimmerX = useRef(new Animated.Value(-80)).current;
 
   useEffect(() => {
     const logoIn = Animated.parallel([
@@ -60,57 +56,12 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
       Animated.timing(subOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
     ]);
 
-    const shimmer = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerX, {
-          toValue: 80,
-          duration: 900,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.delay(1400),
-        Animated.timing(shimmerX, { toValue: -80, duration: 0, useNativeDriver: true }),
-      ])
-    );
+    Animated.sequence([logoIn, textIn]).start();
 
-    const ringPulse = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(ringScale, { toValue: 1.06, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-          Animated.timing(ringOpacity, { toValue: 0.9, duration: 900, useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(ringScale, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-          Animated.timing(ringOpacity, { toValue: 0.5, duration: 900, useNativeDriver: true }),
-        ]),
-      ])
-    );
-
-    const haloRipple = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(haloScale, { toValue: 1.35, duration: 1400, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.timing(haloOpacity, { toValue: 0.18, duration: 400, useNativeDriver: true }),
-        ]),
-        Animated.timing(haloOpacity, { toValue: 0, duration: 1000, useNativeDriver: true }),
-        Animated.timing(haloScale, { toValue: 0.8, duration: 0, useNativeDriver: true }),
-        Animated.delay(600),
-      ])
-    );
-
-    Animated.sequence([logoIn, textIn]).start(() => {
-      shimmer.start();
-      ringPulse.start();
-      haloRipple.start();
-    });
-
-    const timer = setTimeout(onFinish, 3200);
+    const timer = setTimeout(onFinish, SPLASH_MIN_MS);
 
     return () => {
       clearTimeout(timer);
-      shimmer.stop();
-      ringPulse.stop();
-      haloRipple.stop();
     };
   }, [onFinish]);
 
@@ -131,25 +82,10 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
       <Animated.View style={[styles.center, { opacity: masterFade }]}>
         <Animated.View
           style={[
-            styles.halo,
-            { opacity: haloOpacity, transform: [{ scale: haloScale }] },
-          ]}
-          pointerEvents="none"
-        />
-
-        <Animated.View
-          style={[
             styles.logoWrap,
             { opacity: brandOpacity, transform: [{ scale: logoScale }, { rotate: rotateDeg }, { translateY: brandY }] },
           ]}
         >
-          <Animated.View
-            style={[
-              styles.badgeRing,
-              { opacity: ringOpacity, transform: [{ scale: ringScale }] },
-            ]}
-            pointerEvents="none"
-          />
           <TuxedoLogo variant="light" {...LOGO_SIZES.splash} />
         </Animated.View>
 
@@ -159,7 +95,9 @@ export const SplashScreenComponent: React.FC<SplashScreenProps> = ({ onFinish })
             { opacity: tagOpacity, transform: [{ translateY: tagY }] },
           ]}
         >
-          <Text style={styles.tagline}>LUXURY CHAUFFEUR SERVICE</Text>
+          <View style={styles.tagDot} />
+          <Text style={styles.tagline}>Premium Chauffeur</Text>
+          <View style={styles.tagDot} />
         </Animated.View>
 
         <Animated.View style={[styles.dividerWrap, { transform: [{ scaleX: dividerScaleX }] }]}>
@@ -222,37 +160,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  halo: {
-    position: 'absolute',
-    width: LOGO_SIZES.splash.width + 48,
-    height: LOGO_SIZES.splash.height + 48,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: GOLD,
-  },
   logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-    paddingVertical: 8,
-  },
-  badgeRing: {
-    position: 'absolute',
-    width: LOGO_SIZES.splash.width + 24,
-    height: LOGO_SIZES.splash.height + 24,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.35)',
+    marginBottom: 20,
+    paddingVertical: 12,
   },
   tagWrap: {
-    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+  },
+  tagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: GOLD,
+    opacity: 0.85,
   },
   tagline: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 3,
+    fontSize: 17,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 2.2,
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   dividerWrap: {
     marginTop: 28,

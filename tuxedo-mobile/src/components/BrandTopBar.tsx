@@ -1,12 +1,14 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { User } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { LOGO_SIZES, TuxedoLogo } from './TuxedoLogo';
 
 const GOLD = '#D4AF37';
 const SIDE = 44;
+const PROFILE_PHOTO_SIZE = 36;
+const CONCIERGE_PROFILE_PHOTO =
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400';
 
 type Props = {
   onProfilePress?: () => void;
@@ -47,7 +49,7 @@ export function BrandTopBar({ onProfilePress, showRightAction = 'profile' }: Pro
             accessibilityRole="button"
             accessibilityLabel="Open profile"
           >
-            <User color={GOLD} size={20} />
+            <Image source={{ uri: CONCIERGE_PROFILE_PHOTO }} style={styles.profilePhoto} />
           </Pressable>
         ) : (
           <View style={styles.sideSpacer} />
@@ -82,12 +84,18 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: SIDE,
     height: SIDE,
-    borderRadius: 14,
+    borderRadius: SIDE / 2,
     borderWidth: 1,
     borderColor: 'rgba(212,175,55,0.35)',
     backgroundColor: 'rgba(212,175,55,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profilePhoto: {
+    width: PROFILE_PHOTO_SIZE,
+    height: PROFILE_PHOTO_SIZE,
+    borderRadius: PROFILE_PHOTO_SIZE / 2,
   },
   iconBtnPressed: {
     opacity: 0.88,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
 import { MotiView } from 'moti';
-import { Phone, Mail, Link, Copy, CheckCircle2, ArrowRightLeft, Clock, MapPin } from 'lucide-react-native';
+import { Phone, Mail, Link, Copy, CheckCircle2, MapPin } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
@@ -72,7 +72,6 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const { user, addOpenRideRequest } = useApp();
   const { light, medium } = useHaptics();
 
-  const [serviceType, setServiceType] = useState<'transfer' | 'hourly'>('transfer');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -96,18 +95,13 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
 
   const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
 
-  const serviceHint =
-    serviceType === 'transfer'
-      ? 'One-way to a destination'
-      : 'As-directed by the hour';
-
   const handleRequest = async () => {
     await medium();
     const link = buildPassengerLink(pickupLocation);
     addOpenRideRequest({
       guestLabel,
       pickup: pickupLocation,
-      serviceType,
+      serviceType: 'transfer',
       status: 'awaiting_guest',
     });
     navigation.navigate('WaitingForPayment', {
@@ -116,7 +110,7 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
       bookingMode: 'instant',
       pickupLocation,
       passengerLink: link,
-      serviceType,
+      serviceType: 'transfer',
     });
   };
 
@@ -141,11 +135,6 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
     });
   };
 
-  const selectService = async (id: string) => {
-    await light();
-    setServiceType(id as 'transfer' | 'hourly');
-  };
-
   const selectContact = async (method: 'phone' | 'email') => {
     await light();
     setContactMethod(method);
@@ -168,43 +157,11 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
         </Text>
       </MotiView>
 
-      {/* Ride type */}
-      <MotiView
-        from={{ opacity: 0, translateY: 10 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 60 }}
-      >
-        <AppCard style={styles.card}>
-          <Text style={styles.cardTitle}>Ride type</Text>
-          <Text style={styles.cardSub}>
-            Transfer is point A → B. Hourly is timed service at pickup (destination rules apply later).
-          </Text>
-
-          <Segment
-            selected={serviceType}
-            onSelect={selectService}
-            options={[
-              {
-                id: 'transfer',
-                label: 'Transfer',
-                icon: <ArrowRightLeft color={serviceType === 'transfer' ? GOLD : '#6b7280'} size={16} />,
-              },
-              {
-                id: 'hourly',
-                label: 'Hourly',
-                icon: <Clock color={serviceType === 'hourly' ? GOLD : '#6b7280'} size={16} />,
-              },
-            ]}
-          />
-          <Text style={styles.segmentHint}>{serviceHint}</Text>
-        </AppCard>
-      </MotiView>
-
       {/* Guest contact */}
       <MotiView
         from={{ opacity: 0, translateY: 10 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 80 }}
+        transition={{ type: 'timing', duration: 220, delay: 60 }}
       >
         <AppCard style={styles.card}>
           <Text style={styles.cardTitle}>Guest contact</Text>
@@ -262,7 +219,7 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
       <MotiView
         from={{ opacity: 0, translateY: 10 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 100 }}
+        transition={{ type: 'timing', duration: 220, delay: 80 }}
       >
         <AppCard style={styles.card}>
           <View style={styles.linkHeader}>
@@ -321,7 +278,7 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 120 }}
+        transition={{ type: 'timing', duration: 220, delay: 100 }}
         style={styles.ctaWrap}
       >
         <AppButton
@@ -420,14 +377,6 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: GOLD,
   },
-  segmentHint: {
-    marginTop: 10,
-    fontSize: TYPE.small,
-    color: 'rgba(255,255,255,0.4)',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-
   inputBlock: {
     marginTop: 12,
   },

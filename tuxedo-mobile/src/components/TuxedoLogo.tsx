@@ -46,10 +46,10 @@ export function TuxedoLogo({
 /** Preset sizes used across the app */
 export const LOGO_SIZES = {
   /** Tab bar screens (Home, Wallet, Rides, Profile) */
-  header: { width: 240, height: 70 },
+  header: { width: 112, height: 27 },
   /** Stack screens with back button */
-  stackHeader: { width: 200, height: 58 },
-  auth: { width: 200, height: 58 },
-  splash: { width: 260, height: 76 },
-  compact: { width: 100, height: 30 },
+  stackHeader: { width: 104, height: 25 },
+  auth: { width: 145, height: 36 },
+  splash: { width: 180, height: 44 },
+  compact: { width: 78, height: 20 },
 } as const;

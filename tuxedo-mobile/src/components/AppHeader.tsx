@@ -38,7 +38,7 @@ export function AppHeader({ title, subtitle, onBack, rightAction, showLogo = tru
               accessibilityLabel="Go back"
               accessibilityRole="button"
             >
-              <ChevronLeft color="#000000" size={26} strokeWidth={2.5} />
+              <ChevronLeft color={GOLD} size={28} strokeWidth={2.4} />
             </Pressable>
           ) : (
             <View style={styles.backPlaceholder} />
@@ -96,17 +96,8 @@ const styles = StyleSheet.create({
   backBtn: {
     width: SLOT,
     height: SLOT,
-    borderRadius: 14,
-    backgroundColor: GOLD,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 8,
   },
   backBtnPressed: {
     opacity: 0.9,

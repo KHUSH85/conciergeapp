@@ -420,7 +420,7 @@ export const LoginScreen = ({ navigation }: any) => {
         transition={{ type: 'timing', duration: 280, delay: delays.header }}
         style={styles.logoArea}
       >
-        <TuxedoLogo variant="light" width={280} height={82} />
+        <TuxedoLogo variant="light" width={145} height={36} />
         <Text style={styles.tagline}>Premium Chauffeur Service</Text>
       </MotiView>
 

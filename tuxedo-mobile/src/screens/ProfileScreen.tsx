@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Image, View, Text, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import {
   Crown, Shield, Smartphone, Mail, Phone, Building2, CheckCircle2,
@@ -16,6 +16,8 @@ const GOLD_DIM = 'rgba(212,175,55,0.25)';
 const BORDER = 'rgba(255,255,255,0.08)';
 const SURFACE = 'rgba(255,255,255,0.04)';
 const GREEN = '#22c55e';
+const CONCIERGE_PROFILE_PHOTO =
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400';
 
 const TYPE = {
   caption: 10,
@@ -71,13 +73,6 @@ export const ProfileScreen = () => {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : 'Concierge';
 
-  const initials = (user?.name || 'James Anderson')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('');
-
   return (
     <AppScreen brandHeader brandShowProfile={false}>
       {/* Hero */}
@@ -90,7 +85,7 @@ export const ProfileScreen = () => {
           <View style={styles.heroRow}>
             <View style={styles.avatarWrap}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarInitials}>{initials}</Text>
+                <Image source={{ uri: CONCIERGE_PROFILE_PHOTO }} style={styles.avatarPhoto} />
               </View>
               {user?.isMember ? (
                 <View style={styles.crownBadge}>
@@ -201,18 +196,18 @@ const styles = StyleSheet.create({
   avatar: {
     width: 72,
     height: 72,
-    borderRadius: 20,
+    borderRadius: 36,
     backgroundColor: GOLD_FAINT,
     borderWidth: 1,
     borderColor: GOLD_DIM,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  avatarInitials: {
-    color: GOLD,
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: 1,
+  avatarPhoto: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
   },
   crownBadge: {
     position: 'absolute',
