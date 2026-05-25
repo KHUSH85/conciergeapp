@@ -11,6 +11,7 @@ export type HomeStackParamList = {
   ConciergeHome: undefined;
   GuestDetails: { bookingMode: 'instant' | 'scheduled'; pickupLocation: string };
   ScheduleBooking: undefined;
+  SmsPreviewLab: undefined;
   WaitingForPayment: {
     guestPhone?: string;
     guestEmail?: string;
@@ -20,6 +21,7 @@ export type HomeStackParamList = {
     scheduledDate?: string;
     scheduledTime?: string;
     serviceType?: 'transfer' | 'hourly';
+    hourlyHours?: number;
   };
   TrackRide: undefined;
 };

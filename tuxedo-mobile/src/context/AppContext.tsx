@@ -17,6 +17,7 @@ interface AppContextType {
     serviceType: 'transfer' | 'hourly';
     status?: OpenRideRequest['status'];
     scheduledFor?: string;
+    hourlyHours?: number;
   }) => void;
 }
 
@@ -40,6 +41,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       serviceType: 'transfer' | 'hourly';
       status?: OpenRideRequest['status'];
       scheduledFor?: string;
+      hourlyHours?: number;
     }) => {
       const row: OpenRideRequest = {
         id: newOpenRideId(),
@@ -49,6 +51,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         status: input.status ?? 'awaiting_guest',
         createdAt: new Date().toISOString(),
         scheduledFor: input.scheduledFor,
+        hourlyHours: input.hourlyHours,
       };
       setOpenRideRequests((prev) => [row, ...prev]);
     },

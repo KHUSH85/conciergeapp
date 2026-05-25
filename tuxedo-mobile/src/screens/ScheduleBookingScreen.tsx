@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { MotiView } from 'moti';
 import {
   Calendar, Clock, Phone, Mail, ChevronRight, ChevronLeft,
-  ArrowRightLeft, CheckCircle2,
+  ArrowRightLeft, CheckCircle2, Plus, Minus, AlertCircle,
 } from 'lucide-react-native';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
@@ -53,6 +53,10 @@ const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
     subtitle: 'Review and confirm the scheduled ride.',
   },
 };
+
+const MIN_HOURLY_HOURS = 2;
+const MAX_HOURLY_HOURS = 12;
+const QUICK_HOURS = [2, 3, 4, 6, 8, 12] as const;
 
 function Segment({
   selected,
@@ -131,6 +135,38 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
         {value}
       </Text>
     </View>
+  );
+}
+
+function HourLimitModal({
+  visible,
+  title,
+  message,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  message: string;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={limitModal.overlay} onPress={onClose}>
+        <Pressable style={limitModal.card} onPress={(e) => e.stopPropagation()}>
+          <View style={limitModal.iconWrap}>
+            <AlertCircle color={GOLD} size={24} strokeWidth={2.4} />
+          </View>
+          <Text style={limitModal.title}>{title}</Text>
+          <Text style={limitModal.message}>{message}</Text>
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [limitModal.button, pressed && limitModal.buttonPressed]}
+          >
+            <Text style={limitModal.buttonText}>Got it</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -215,6 +251,8 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
   const [serviceType, setServiceType] = useState<'transfer' | 'hourly'>('transfer');
+  const [hourlyHours, setHourlyHours] = useState(MIN_HOURLY_HOURS);
+  const [hourLimitMessage, setHourLimitMessage] = useState<{ title: string; message: string } | null>(null);
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -238,7 +276,28 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   const serviceHint =
     serviceType === 'transfer'
       ? 'Point A → point B when the guest adds a drop-off.'
-      : 'Timed service from pickup; mileage rules apply in pricing later.';
+      : 'Timed chauffeur service from pickup. Minimum 2 hours, maximum 12 hours.';
+
+  const setHourlyDuration = async (nextHours: number) => {
+    await light();
+    if (nextHours < MIN_HOURLY_HOURS) {
+      setHourlyHours(MIN_HOURLY_HOURS);
+      setHourLimitMessage({
+        title: 'Minimum 2 hours',
+        message: 'Hourly rides must be booked for at least 2 hours.',
+      });
+      return;
+    }
+    if (nextHours > MAX_HOURLY_HOURS) {
+      setHourlyHours(MAX_HOURLY_HOURS);
+      setHourLimitMessage({
+        title: 'Maximum 12 hours',
+        message: 'Hourly rides can be booked for up to 12 hours only.',
+      });
+      return;
+    }
+    setHourlyHours(nextHours);
+  };
 
   const goNext = async () => {
     await light();
@@ -257,13 +316,15 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
     const pickup = user?.hotelName || 'The Grand Majestic Hotel';
     const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
     const timeLabel = formatTimeDisplay(selectedTime);
-    const scheduledFor = `${selectedDate} · ${timeLabel}`;
+    const durationLabel = serviceType === 'hourly' ? ` · ${hourlyHours} hours` : '';
+    const scheduledFor = `${selectedDate} · ${timeLabel}${durationLabel}`;
     addOpenRideRequest({
       guestLabel,
       pickup,
       serviceType,
       status: 'awaiting_guest',
       scheduledFor,
+      hourlyHours: serviceType === 'hourly' ? hourlyHours : undefined,
     });
     navigation.navigate('WaitingForPayment', {
       bookingMode: 'scheduled',
@@ -273,6 +334,7 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
       guestEmail: contactMethod === 'email' ? guestEmail : '',
       pickupLocation: pickup,
       serviceType,
+      hourlyHours: serviceType === 'hourly' ? hourlyHours : undefined,
     });
   };
 
@@ -283,6 +345,13 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
 
   return (
     <AppScreen keyboardAvoiding noTopPad>
+      <HourLimitModal
+        visible={Boolean(hourLimitMessage)}
+        title={hourLimitMessage?.title ?? ''}
+        message={hourLimitMessage?.message ?? ''}
+        onClose={() => setHourLimitMessage(null)}
+      />
+
       <MotiView
         from={{ opacity: 0, translateY: -6 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -477,6 +546,67 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
               />
               <Text style={styles.segmentHint}>{serviceHint}</Text>
 
+              {serviceType === 'hourly' ? (
+                <MotiView
+                  from={{ opacity: 0, translateY: 8 }}
+                  animate={{ opacity: 1, translateY: 0 }}
+                  transition={{ type: 'timing', duration: 180 }}
+                  style={styles.hourCard}
+                >
+                  <View style={styles.hourHeader}>
+                    <View>
+                      <Text style={styles.hourLabel}>Duration</Text>
+                      <Text style={styles.hourSub}>2 hour minimum · 12 hour maximum</Text>
+                    </View>
+                    <View style={styles.hourBadge}>
+                      <Text style={styles.hourBadgeText}>{hourlyHours}h</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.hourStepper}>
+                    <Pressable
+                      onPress={() => setHourlyDuration(hourlyHours - 1)}
+                      style={({ pressed }) => [styles.hourStepBtn, pressed && styles.hourStepBtnPressed]}
+                    >
+                      <Minus color={GOLD} size={18} strokeWidth={2.5} />
+                    </Pressable>
+
+                    <View style={styles.hourValueWrap}>
+                      <Text style={styles.hourValue}>{hourlyHours}</Text>
+                      <Text style={styles.hourValueUnit}>hours</Text>
+                    </View>
+
+                    <Pressable
+                      onPress={() => setHourlyDuration(hourlyHours + 1)}
+                      style={({ pressed }) => [styles.hourStepBtn, pressed && styles.hourStepBtnPressed]}
+                    >
+                      <Plus color={GOLD} size={18} strokeWidth={2.5} />
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.hourChips}>
+                    {QUICK_HOURS.map((hours) => {
+                      const active = hourlyHours === hours;
+                      return (
+                        <Pressable
+                          key={hours}
+                          onPress={() => setHourlyDuration(hours)}
+                          style={({ pressed }) => [
+                            styles.hourChip,
+                            active && styles.hourChipActive,
+                            pressed && styles.hourChipPressed,
+                          ]}
+                        >
+                          <Text style={[styles.hourChipText, active && styles.hourChipTextActive]}>
+                            {hours}h
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </MotiView>
+              ) : null}
+
               <AppButton label="Continue" onPress={goNext} haptic="medium" style={styles.ctaBtn} />
             </>
           )}
@@ -487,7 +617,7 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
               <View style={styles.confirmCard}>
                 <SummaryRow
                   label="Service"
-                  value={serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}
+                  value={serviceType === 'transfer' ? 'Transfer (A → B)' : `Hourly · ${hourlyHours} hours`}
                 />
                 <View style={styles.confirmDivider} />
                 <SummaryRow
@@ -636,6 +766,123 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  hourCard: {
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  hourHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 14,
+  },
+  hourLabel: {
+    color: '#fff',
+    fontSize: TYPE.title,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  hourSub: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+  },
+  hourBadge: {
+    minWidth: 46,
+    height: 34,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hourBadgeText: {
+    color: '#000',
+    fontSize: TYPE.body,
+    fontWeight: '800',
+  },
+  hourStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  hourStepBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hourStepBtnPressed: {
+    opacity: 0.86,
+    backgroundColor: 'rgba(212,175,55,0.14)',
+  },
+  hourValueWrap: {
+    flex: 1,
+    minHeight: 66,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hourValue: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '800',
+    lineHeight: 32,
+  },
+  hourValueUnit: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginTop: 2,
+  },
+  hourChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  hourChip: {
+    minWidth: 45,
+    minHeight: 34,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  hourChipActive: {
+    borderColor: GOLD_DIM,
+    backgroundColor: GOLD_FAINT,
+  },
+  hourChipPressed: {
+    opacity: 0.9,
+  },
+  hourChipText: {
+    color: 'rgba(255,255,255,0.52)',
+    fontSize: TYPE.small,
+    fontWeight: '700',
+  },
+  hourChipTextActive: {
+    color: GOLD,
+  },
+
   fieldBlock: {
     marginTop: 0,
   },
@@ -758,6 +1005,68 @@ const styles = StyleSheet.create({
 
   ctaBtn: {
     width: '100%',
+  },
+});
+
+const limitModal = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    backgroundColor: '#090909',
+    padding: 20,
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  message: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: TYPE.body,
+    fontWeight: '500',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  button: {
+    width: '100%',
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.88,
+  },
+  buttonText: {
+    color: '#000',
+    fontSize: TYPE.body,
+    fontWeight: '800',
   },
 });
 

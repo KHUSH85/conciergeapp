@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
 import { MotiView } from 'moti';
 import {
   RefreshCw, ArrowLeft, Send,
   ArrowRightLeft, Clock, MapPin, Calendar,
+  Link, Copy, CheckCircle2,
 } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
 import { AppScreen } from '../components/AppScreen';
@@ -50,11 +52,14 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
   const { light } = useHaptics();
   const delays = useStaggerAnimation();
   const [resent, setResent] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const serviceType = route?.params?.serviceType as 'transfer' | 'hourly' | undefined;
   const pickup = route?.params?.pickupLocation as string | undefined;
+  const passengerLink = route?.params?.passengerLink as string | undefined;
   const scheduledDate = route?.params?.scheduledDate as string | undefined;
   const scheduledTime = route?.params?.scheduledTime as string | undefined;
+  const hourlyHours = route?.params?.hourlyHours as number | undefined;
 
   const hasMeta = Boolean(serviceType || scheduledDate || pickup);
 
@@ -62,6 +67,27 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
     await light();
     setResent(true);
     setTimeout(() => setResent(false), 3000);
+  };
+
+  const handleCopy = async () => {
+    if (!passengerLink) return;
+    await light();
+    try {
+      await Clipboard.setStringAsync(passengerLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* ignore clipboard failures */
+    }
+  };
+
+  const handleShare = async () => {
+    if (!passengerLink) return;
+    await light();
+    Share.share({
+      message: `Your Tuxedo chauffeur is ready. Tap to track your ride: ${passengerLink}`,
+      url: passengerLink,
+    });
   };
 
   return (
@@ -125,7 +151,7 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
                   )
                 }
                 label="Service:"
-                value={serviceType === 'transfer' ? 'Transfer (A → B)' : 'Hourly'}
+                value={serviceType === 'transfer' ? 'Transfer (A → B)' : `Hourly${hourlyHours ? ` · ${hourlyHours} hours` : ''}`}
               />
             ) : null}
             {pickup ? (
@@ -148,6 +174,59 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
                 />
               </>
             ) : null}
+          </AppCard>
+        </MotiView>
+      ) : null}
+
+      {/* Passenger link preview */}
+      {passengerLink ? (
+        <MotiView
+          from={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 220, delay: delays.content + 40 }}
+        >
+          <AppCard style={styles.linkCard}>
+            <View style={styles.linkHeader}>
+              <View style={styles.linkIconWrap}>
+                <Link color={GOLD} size={14} />
+              </View>
+              <View style={styles.linkTitleCol}>
+                <Text style={styles.linkTitle}>Preview tracking link</Text>
+                <Text style={styles.linkSub}>Visible after the request is sent</Text>
+              </View>
+            </View>
+
+            <View style={styles.linkBox}>
+              <Text style={styles.linkText} numberOfLines={3} selectable>
+                {passengerLink}
+              </Text>
+            </View>
+
+            <View style={styles.linkActions}>
+              <Pressable
+                onPress={handleCopy}
+                style={({ pressed }) => [
+                  styles.linkActionBtn,
+                  copied && styles.linkActionBtnSuccess,
+                  pressed && styles.linkActionBtnPressed,
+                ]}
+                accessibilityRole="button"
+              >
+                {copied ? <CheckCircle2 color={GREEN} size={14} /> : <Copy color={GOLD} size={14} />}
+                <Text style={[styles.linkActionText, copied && styles.linkActionTextSuccess]}>
+                  {copied ? 'Copied!' : 'Copy link'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleShare}
+                style={({ pressed }) => [styles.linkActionBtn, pressed && styles.linkActionBtnPressed]}
+                accessibilityRole="button"
+              >
+                <Link color={GOLD} size={14} />
+                <Text style={styles.linkActionText}>Share</Text>
+              </Pressable>
+            </View>
           </AppCard>
         </MotiView>
       ) : null}
@@ -331,6 +410,88 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: BORDER,
     marginLeft: 52,
+  },
+
+  linkCard: {
+    padding: 14,
+    marginBottom: 10,
+  },
+  linkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  linkIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkTitleCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  linkTitle: {
+    color: '#fff',
+    fontSize: TYPE.body,
+    fontWeight: '700',
+  },
+  linkSub: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  linkBox: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 10,
+  },
+  linkText: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: TYPE.small,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  linkActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  linkActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 10,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    borderRadius: 10,
+  },
+  linkActionBtnPressed: {
+    opacity: 0.9,
+  },
+  linkActionBtnSuccess: {
+    backgroundColor: 'rgba(34,197,94,0.08)',
+    borderColor: 'rgba(34,197,94,0.28)',
+  },
+  linkActionText: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '700',
+  },
+  linkActionTextSuccess: {
+    color: GREEN,
   },
 
   actionsWrap: {

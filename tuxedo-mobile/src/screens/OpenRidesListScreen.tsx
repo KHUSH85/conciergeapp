@@ -94,7 +94,7 @@ export const OpenRidesListScreen = ({ navigation }: any) => {
                       <Text style={styles.pillText}>{statusLabel(r.status)}</Text>
                     </View>
                     <Text style={styles.typePill}>
-                      {r.serviceType === 'transfer' ? 'Transfer' : 'Hourly'}
+                      {r.serviceType === 'transfer' ? 'Transfer' : `Hourly${r.hourlyHours ? ` · ${r.hourlyHours}h` : ''}`}
                     </Text>
                   </View>
                   <Text style={styles.guest}>{r.guestLabel}</Text>

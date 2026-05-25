@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
-import { Phone, Mail, Link, Copy, CheckCircle2, MapPin } from 'lucide-react-native';
-import * as Clipboard from 'expo-clipboard';
+import { Phone, Mail, MapPin } from 'lucide-react-native';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
 import { AppInput } from '../components/AppInput';
@@ -76,8 +75,6 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const [guestEmail, setGuestEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
-  const [generatedLink, setGeneratedLink] = useState('');
-  const [copied, setCopied] = useState(false);
 
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -111,27 +108,6 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
       pickupLocation,
       passengerLink: link,
       serviceType: 'transfer',
-    });
-  };
-
-  const handleGenerateLink = () => {
-    setGeneratedLink(buildPassengerLink(pickupLocation));
-  };
-
-  const handleCopy = async () => {
-    try {
-      await Clipboard.setStringAsync(generatedLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const handleShare = () => {
-    Share.share({
-      message: `Your Tuxedo chauffeur is ready. Tap to track your ride: ${generatedLink}`,
-      url: generatedLink,
     });
   };
 
@@ -215,70 +191,11 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
         </AppCard>
       </MotiView>
 
-      {/* Tracking link */}
-      <MotiView
-        from={{ opacity: 0, translateY: 10 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 80 }}
-      >
-        <AppCard style={styles.card}>
-          <View style={styles.linkHeader}>
-            <View style={styles.linkIconWrap}>
-              <Link color={GOLD} size={14} />
-            </View>
-            <Text style={styles.linkTitle}>Passenger tracking link</Text>
-          </View>
-
-          {!generatedLink ? (
-            <Pressable
-              onPress={handleGenerateLink}
-              style={({ pressed }) => [styles.generateBtn, pressed && styles.generateBtnPressed]}
-            >
-              <Text style={styles.generateBtnText}>Preview link</Text>
-            </Pressable>
-          ) : (
-            <MotiView
-              from={{ opacity: 0, translateY: 4 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: 'timing', duration: 180 }}
-            >
-              <View style={styles.linkBox}>
-                <Text style={styles.linkText} numberOfLines={3} selectable>
-                  {generatedLink}
-                </Text>
-              </View>
-              <View style={styles.linkActions}>
-                <Pressable
-                  onPress={handleCopy}
-                  style={({ pressed }) => [
-                    styles.linkActionBtn,
-                    copied && styles.linkActionBtnSuccess,
-                    pressed && styles.linkActionBtnPressed,
-                  ]}
-                >
-                  {copied ? <CheckCircle2 color="#22c55e" size={14} /> : <Copy color={GOLD} size={14} />}
-                  <Text style={[styles.linkActionText, copied && styles.linkActionTextSuccess]}>
-                    {copied ? 'Copied!' : 'Copy'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleShare}
-                  style={({ pressed }) => [styles.linkActionBtn, pressed && styles.linkActionBtnPressed]}
-                >
-                  <Link color={GOLD} size={14} />
-                  <Text style={styles.linkActionText}>Share</Text>
-                </Pressable>
-              </View>
-            </MotiView>
-          )}
-        </AppCard>
-      </MotiView>
-
       {/* CTA */}
       <MotiView
         from={{ opacity: 0, translateY: 8 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: 'timing', duration: 220, delay: 100 }}
+        transition={{ type: 'timing', duration: 220, delay: 80 }}
         style={styles.ctaWrap}
       >
         <AppButton
@@ -393,92 +310,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 6,
     marginLeft: 2,
-  },
-
-  linkHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  linkIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: GOLD_FAINT,
-    borderWidth: 1,
-    borderColor: GOLD_DIM,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  linkTitle: {
-    color: '#fff',
-    fontSize: TYPE.body,
-    fontWeight: '600',
-  },
-  generateBtn: {
-    minHeight: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: GOLD_DIM,
-    borderStyle: 'dashed',
-    backgroundColor: GOLD_FAINT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generateBtnPressed: {
-    opacity: 0.88,
-  },
-  generateBtnText: {
-    color: GOLD,
-    fontSize: TYPE.body,
-    fontWeight: '600',
-  },
-  linkBox: {
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderWidth: 1,
-    borderColor: BORDER,
-    marginBottom: 10,
-  },
-  linkText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: TYPE.small,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  linkActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  linkActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minHeight: 40,
-    paddingHorizontal: 10,
-    backgroundColor: GOLD_FAINT,
-    borderWidth: 1,
-    borderColor: GOLD_DIM,
-    borderRadius: 10,
-  },
-  linkActionBtnPressed: {
-    opacity: 0.9,
-  },
-  linkActionBtnSuccess: {
-    backgroundColor: 'rgba(34,197,94,0.08)',
-    borderColor: 'rgba(34,197,94,0.28)',
-  },
-  linkActionText: {
-    color: GOLD,
-    fontSize: TYPE.small,
-    fontWeight: '700',
-  },
-  linkActionTextSuccess: {
-    color: '#22c55e',
   },
 
   ctaWrap: {

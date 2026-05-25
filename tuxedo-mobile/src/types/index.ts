@@ -105,4 +105,6 @@ export interface OpenRideRequest {
   createdAt: string;
   /** Present for scheduled / reserve flows */
   scheduledFor?: string;
+  /** Present for hourly reserve flows */
+  hourlyHours?: number;
 }

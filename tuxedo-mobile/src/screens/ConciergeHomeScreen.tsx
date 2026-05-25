@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
   Car, Wallet, TrendingUp, History,
-  ChevronRight, Zap,
+  ChevronRight, Zap, MessageCircle,
 } from 'lucide-react-native';
 import { AppCard } from '../components/AppCard';
 import { AppButton } from '../components/AppButton';
@@ -67,6 +67,12 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       label: 'Commission Wallet',
       sub: '$142.50 today',
       onPress: () => navigation.navigate('Wallet' as any, { screen: 'CommissionWallet' }),
+    },
+    {
+      icon: MessageCircle,
+      label: 'SMS Preview Lab',
+      sub: 'App + membership SMS demo',
+      onPress: () => navigation.navigate('SmsPreviewLab'),
     },
     {
       icon: Car,

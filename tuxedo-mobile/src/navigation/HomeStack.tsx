@@ -8,6 +8,7 @@ import { GuestDetailsScreen } from '../screens/GuestDetailsScreen';
 import { ScheduleBookingScreen } from '../screens/ScheduleBookingScreen';
 import { WaitingForPaymentScreen } from '../screens/WaitingForPaymentScreen';
 import { TrackRideScreen } from '../screens/TrackRideScreen';
+import { SmsPreviewLabScreen } from '../screens/SmsPreviewLabScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -31,6 +32,11 @@ export function HomeStack() {
         name="ScheduleBooking"
         component={ScheduleBookingScreen}
         options={({ navigation }) => stackScreenOptions('Schedule ride', navigation)}
+      />
+      <Stack.Screen
+        name="SmsPreviewLab"
+        component={SmsPreviewLabScreen}
+        options={({ navigation }) => stackScreenOptions('SMS preview', navigation)}
       />
       <Stack.Screen
         name="WaitingForPayment"
