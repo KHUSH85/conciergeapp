@@ -78,7 +78,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       icon: Car,
       label: 'Track Passenger Ride',
       sub: 'Share live link',
-      onPress: () => Linking.openURL(`${PASSENGER_WEB_BASE_URL}/track-ride?token=MB1HCPUS&pickup=The+Grand+Majestic+Hotel`),
+      onPress: () => Linking.openURL(`${PASSENGER_WEB_BASE_URL}/track-ride`),
     },
   ];
 
