@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+  import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Phone, Mail, MapPin } from 'lucide-react-native';
