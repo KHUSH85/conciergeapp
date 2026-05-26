@@ -54,7 +54,7 @@ const COUNTRIES: Country[] = [
   { name: 'India',          dial: '+91',  code: 'IN' },
 ];
 
-const DEFAULT_COUNTRY = COUNTRIES[0];
+const DEFAULT_COUNTRY = COUNTRIES.find(country => country.code === 'US') ?? COUNTRIES[0];
 
 interface CountryPickerProps { selected: Country; onSelect: (c: Country) => void; }
 
