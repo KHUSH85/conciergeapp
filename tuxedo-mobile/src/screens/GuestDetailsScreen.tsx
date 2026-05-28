@@ -108,6 +108,9 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [step, setStep] = useState<'contact' | 'addons'>('contact');
+  const [pickupLocation, setPickupLocation] = useState(
+    route.params?.pickupLocation || user?.hotelName || '1 Times Square, New York, NY 10036',
+  );
 
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -120,8 +123,6 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
     contactMethod === 'phone'
       ? guestPhone.length > 5
       : guestEmail.length > 0 && validateEmail(guestEmail) && !emailError;
-
-  const pickupLocation = route.params?.pickupLocation || user?.hotelName || 'The Grand Majestic Hotel';
 
   const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
 
@@ -175,9 +176,14 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
         <View style={styles.pickupIconWrap}>
           <MapPin color={GOLD} size={14} />
         </View>
-        <Text style={styles.pickupText} numberOfLines={2}>
-          {pickupLocation}
-        </Text>
+        <AppInput
+          leftSlot={null}
+          placeholder="Pickup address"
+          value={pickupLocation}
+          onChangeText={setPickupLocation}
+          containerStyle={styles.pickupInputContainer}
+          style={styles.pickupInput}
+        />
       </MotiView>
 
       {step === 'contact' ? (
@@ -382,6 +388,19 @@ const styles = StyleSheet.create({
     fontSize: TYPE.body,
     fontWeight: '600',
     lineHeight: 18,
+  },
+  pickupInputContainer: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  pickupInput: {
+    paddingHorizontal: 0,
+    paddingVertical: 8,
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: TYPE.body,
+    fontWeight: '700',
   },
 
   card: {
