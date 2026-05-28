@@ -15,6 +15,7 @@ import { useApp } from '../context/AppContext';
 import { useSplashVisible } from '../context/SplashContext';
 import { loadMembershipState } from '../utils/appStorage';
 import { isUserOnboarded } from './FirstTimeSetupScreen';
+import { DEFAULT_US_HOTEL } from '../config/defaultHotel';
 
 const GOLD       = '#D4AF37';
 const GOLD_DIM   = 'rgba(212,175,55,0.25)';
@@ -391,7 +392,7 @@ export const LoginScreen = ({ navigation }: any) => {
       phone: `${country.dial}${phone}`,
       role,
       hotelId: 'hotel-1',
-      hotelName: 'The Grand Majestic Hotel',
+      hotelName: DEFAULT_US_HOTEL,
       deviceBound: true,
       deviceName: 'Concierge Desk Mobile',
       kycStatus: 'approved' as const,

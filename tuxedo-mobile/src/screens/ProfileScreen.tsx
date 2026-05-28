@@ -9,6 +9,7 @@ import { AppButton } from '../components/AppButton';
 import { AppScreen } from '../components/AppScreen';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { getHotelName } from '../config/defaultHotel';
 
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -141,7 +142,7 @@ export const ProfileScreen = () => {
           <DetailRow
             icon={Building2}
             label="Hotel"
-            value={user?.hotelName || 'The Grand Majestic Hotel'}
+            value={getHotelName(user?.hotelName)}
           />
           <DetailRow icon={Mail} label="Email" value={user?.email || 'james@grandhotel.com'} />
           <DetailRow icon={Phone} label="Phone" value={user?.phone || '+1 (555) 123-4567'} />

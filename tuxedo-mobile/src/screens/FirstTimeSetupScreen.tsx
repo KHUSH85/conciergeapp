@@ -12,6 +12,7 @@ import { AppInput } from '../components/AppInput';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { DEFAULT_US_HOTEL, getHotelName } from '../config/defaultHotel';
 
 const GOLD       = '#D4AF37';
 const GOLD_DIM   = 'rgba(212,175,55,0.25)';
@@ -94,7 +95,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
   const prefillRole: string = route?.params?.role ?? pendingUser?.role ?? user?.role ?? 'concierge';
 
   const [fullName,  setFullName]  = useState(pendingUser?.name ?? user?.name ?? '');
-  const [hotelName, setHotelName] = useState(pendingUser?.hotelName ?? user?.hotelName ?? '');
+  const [hotelName, setHotelName] = useState(getHotelName(pendingUser?.hotelName ?? user?.hotelName));
   const [role,      setRole]      = useState<string>(prefillRole);
   const [loading,   setLoading]   = useState(false);
   const [done,      setDone]      = useState(false);
@@ -115,7 +116,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
 
     const profile: StoredProfile = {
       fullName:  fullName.trim(),
-      hotelName: hotelName.trim(),
+      hotelName: getHotelName(hotelName.trim()),
       role,
       onboarded: true,
     };
@@ -128,7 +129,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
       setUser({
         ...base,
         name:      profile.fullName,
-        hotelName: profile.hotelName || base.hotelName,
+        hotelName: getHotelName(profile.hotelName || base.hotelName),
         role:      role as 'concierge' | 'manager',
       });
     }
@@ -183,7 +184,7 @@ export const FirstTimeSetupScreen = ({ navigation, route }: any) => {
           ref={hotelRef}
           value={hotelName}
           onChangeText={setHotelName}
-          placeholder="e.g. The Grand Majestic Hotel"
+          placeholder={`e.g. ${DEFAULT_US_HOTEL}`}
           autoCapitalize="words"
           returnKeyType="done"
           onSubmitEditing={canContinue ? handleContinue : undefined}

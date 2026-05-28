@@ -12,6 +12,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
 import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
+import { getHotelName } from '../config/defaultHotel';
 
 const GOLD        = '#D4AF37';
 const GOLD_FAINT  = 'rgba(212,175,55,0.08)';
@@ -78,11 +79,11 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
       icon: Car,
       label: 'Track Passenger Ride',
       sub: 'Share live link',
-      onPress: () => Linking.openURL(`${PASSENGER_WEB_BASE_URL}/track-ride`),
+      onPress: () => Linking.openURL(`${PASSENGER_WEB_BASE_URL}/track-ride?pickup=${encodeURIComponent(pickupLocation)}`),
     },
   ];
 
-  const pickupLocation = user?.hotelName || 'The Grand Majestic Hotel';
+  const pickupLocation = getHotelName(user?.hotelName);
 
   return (
     <AppScreen brandHeader>
@@ -101,7 +102,7 @@ export const ConciergeHomeScreen = ({ navigation }: any) => {
         </View>
         <View style={styles.hotelChip}>
           <Text style={styles.hotelName} numberOfLines={2}>
-            {user?.hotelName || 'Luxury Concierge'}
+            {pickupLocation}
           </Text>
         </View>
       </MotiView>

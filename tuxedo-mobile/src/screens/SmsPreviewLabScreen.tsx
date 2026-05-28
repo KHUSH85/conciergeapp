@@ -18,6 +18,7 @@ import { AppScreen } from '../components/AppScreen';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
+import { DEFAULT_US_HOTEL } from '../config/defaultHotel';
 
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -142,7 +143,7 @@ export const SmsPreviewLabScreen = () => {
   const [sent, setSent] = useState<SentState>(DEFAULT_SENT);
   const [rideStarted, setRideStarted] = useState(false);
 
-  const trackLink = `${PASSENGER_WEB_BASE_URL}/track-ride?token=SMSDEMO&pickup=The+Grand+Majestic+Hotel`;
+  const trackLink = `${PASSENGER_WEB_BASE_URL}/track-ride?token=SMSDEMO&pickup=${encodeURIComponent(DEFAULT_US_HOTEL)}`;
   const membershipLink = `${PASSENGER_WEB_BASE_URL}/membership?rideId=${DEMO_RIDE_ID}&source=sms_membership_offer`;
 
   const smsCopy = useMemo(

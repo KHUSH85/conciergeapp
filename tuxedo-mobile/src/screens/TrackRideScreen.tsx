@@ -14,6 +14,7 @@ import { AppHeader } from '../components/AppHeader';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { getHotelName } from '../config/defaultHotel';
 import { storePendingRideCreditOffer } from '../utils/appStorage';
 import type { User as AppUser } from '../types';
 
@@ -56,7 +57,7 @@ export const TrackRideScreen = ({ navigation, route }: any) => {
   const [progressWidth, setProgressWidth] = useState(10);
 
   const isMember = user?.isMember === true;
-  const pickupLocation = user?.hotelName || 'The Grand Majestic Hotel';
+  const pickupLocation = getHotelName(user?.hotelName);
 
   useEffect(() => {
     const params = route.params;

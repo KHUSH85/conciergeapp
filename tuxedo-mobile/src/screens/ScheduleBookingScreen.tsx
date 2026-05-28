@@ -13,6 +13,7 @@ import { TimePickerModal, formatTimeDisplay } from '../components/TimePickerModa
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { useApp } from '../context/AppContext';
+import { getHotelName } from '../config/defaultHotel';
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth,
@@ -313,7 +314,7 @@ export const ScheduleBookingScreen = ({ navigation }: any) => {
   };
 
   const handleRequest = () => {
-    const pickup = user?.hotelName || 'The Grand Majestic Hotel';
+    const pickup = getHotelName(user?.hotelName);
     const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
     const timeLabel = formatTimeDisplay(selectedTime);
     const durationLabel = serviceType === 'hourly' ? ` · ${hourlyHours} hours` : '';

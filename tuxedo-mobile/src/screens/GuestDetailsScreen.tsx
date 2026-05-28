@@ -9,6 +9,7 @@ import { AppScreen } from '../components/AppScreen';
 import { useHaptics } from '../hooks/useHaptics';
 import { useApp } from '../context/AppContext';
 import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
+import { getHotelName } from '../config/defaultHotel';
 
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -109,7 +110,7 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [step, setStep] = useState<'contact' | 'addons'>('contact');
   const [pickupLocation, setPickupLocation] = useState(
-    route.params?.pickupLocation || user?.hotelName || '1 Times Square, New York, NY 10036',
+    route.params?.pickupLocation || getHotelName(user?.hotelName),
   );
 
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
