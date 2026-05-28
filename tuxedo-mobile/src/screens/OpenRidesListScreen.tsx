@@ -110,6 +110,23 @@ export const OpenRidesListScreen = ({ navigation }: any) => {
                       <Text style={styles.sched}>{r.scheduledFor}</Text>
                     </View>
                   ) : null}
+                  {r.premiumAddOns?.length ? (
+                    <View style={styles.addOnsWrap}>
+                      <Text style={styles.addOnsLabel}>Premium options</Text>
+                      <View style={styles.addOnsChips}>
+                        {r.premiumAddOns.slice(0, 4).map((item) => (
+                          <View key={item} style={styles.addOnChip}>
+                            <Text style={styles.addOnChipText}>{item}</Text>
+                          </View>
+                        ))}
+                        {r.premiumAddOns.length > 4 ? (
+                          <View style={styles.addOnChip}>
+                            <Text style={styles.addOnChipText}>+{r.premiumAddOns.length - 4} more</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+                  ) : null}
                   <View style={styles.mapHint}>
                     <Navigation color={GOLD} size={14} />
                     <Text style={styles.mapHintText}>Tap for live status & map</Text>
@@ -157,6 +174,38 @@ const styles = StyleSheet.create({
   locRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
   loc: { flex: 1, color: '#d1d5db', fontSize: 13, fontWeight: '500', lineHeight: 18 },
   sched: { flex: 1, color: '#9ca3af', fontSize: 12, fontWeight: '600' },
+  addOnsWrap: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  addOnsLabel: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 7,
+  },
+  addOnsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  addOnChip: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(212,175,55,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.25)',
+  },
+  addOnChipText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '700',
+  },
   mapHint: {
     flexDirection: 'row',
     alignItems: 'center',

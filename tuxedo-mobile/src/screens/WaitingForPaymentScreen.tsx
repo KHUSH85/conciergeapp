@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Share } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Share, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
   RefreshCw, ArrowLeft, Send,
   ArrowRightLeft, Clock, MapPin, Calendar,
-  Link, Copy, CheckCircle2,
+  Link, Copy, CheckCircle2, ExternalLink, Sparkles,
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppCard } from '../components/AppCard';
@@ -57,6 +57,7 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
   const serviceType = route?.params?.serviceType as 'transfer' | 'hourly' | undefined;
   const pickup = route?.params?.pickupLocation as string | undefined;
   const passengerLink = route?.params?.passengerLink as string | undefined;
+  const premiumAddOns = (route?.params?.premiumAddOns ?? []) as string[];
   const scheduledDate = route?.params?.scheduledDate as string | undefined;
   const scheduledTime = route?.params?.scheduledTime as string | undefined;
   const hourlyHours = route?.params?.hourlyHours as number | undefined;
@@ -88,6 +89,12 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
       message: `Your Tuxedo chauffeur is ready. Tap to track your ride: ${passengerLink}`,
       url: passengerLink,
     });
+  };
+
+  const handleOpenPreview = async () => {
+    if (!passengerLink) return;
+    await light();
+    Linking.openURL(passengerLink);
   };
 
   return (
@@ -178,6 +185,34 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
         </MotiView>
       ) : null}
 
+      {/* Premium options summary */}
+      {premiumAddOns.length > 0 ? (
+        <MotiView
+          from={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 220, delay: delays.content + 20 }}
+        >
+          <AppCard style={styles.addOnsCard}>
+            <View style={styles.addOnsHeader}>
+              <View style={styles.addOnsIconWrap}>
+                <Sparkles color={GOLD} size={14} />
+              </View>
+              <View style={styles.linkTitleCol}>
+                <Text style={styles.linkTitle}>Selected premium options</Text>
+                <Text style={styles.linkSub}>{premiumAddOns.length} option{premiumAddOns.length === 1 ? '' : 's'} attached to this request</Text>
+              </View>
+            </View>
+            <View style={styles.addOnsChips}>
+              {premiumAddOns.map((item) => (
+                <View key={item} style={styles.addOnChip}>
+                  <Text style={styles.addOnChipText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          </AppCard>
+        </MotiView>
+      ) : null}
+
       {/* Passenger link preview */}
       {passengerLink ? (
         <MotiView
@@ -203,6 +238,15 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
             </View>
 
             <View style={styles.linkActions}>
+              <Pressable
+                onPress={handleOpenPreview}
+                style={({ pressed }) => [styles.linkActionBtn, pressed && styles.linkActionBtnPressed]}
+                accessibilityRole="button"
+              >
+                <ExternalLink color={GOLD} size={14} />
+                <Text style={styles.linkActionText}>Preview</Text>
+              </Pressable>
+
               <Pressable
                 onPress={handleCopy}
                 style={({ pressed }) => [
@@ -410,6 +454,45 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: BORDER,
     marginLeft: 52,
+  },
+
+  addOnsCard: {
+    padding: 14,
+    marginBottom: 10,
+  },
+  addOnsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  addOnsIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addOnsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  addOnChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+  },
+  addOnChipText: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '700',
   },
 
   linkCard: {

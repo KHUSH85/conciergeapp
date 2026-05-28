@@ -22,6 +22,7 @@ export type HomeStackParamList = {
     scheduledTime?: string;
     serviceType?: 'transfer' | 'hourly';
     hourlyHours?: number;
+    premiumAddOns?: string[];
   };
   TrackRide: undefined;
 };

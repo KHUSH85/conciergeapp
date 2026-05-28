@@ -107,4 +107,6 @@ export interface OpenRideRequest {
   scheduledFor?: string;
   /** Present for hourly reserve flows */
   hourlyHours?: number;
+  /** Premium services selected by concierge/passenger before dispatch */
+  premiumAddOns?: string[];
 }
