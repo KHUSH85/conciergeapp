@@ -1,5 +1,5 @@
   import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Alert, FlatList, Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { MotiView } from 'moti';
 import { Phone, Mail, MapPin, Sparkles } from 'lucide-react-native';
 import { AppCard } from '../components/AppCard';
@@ -10,6 +10,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useApp } from '../context/AppContext';
 import { PASSENGER_WEB_BASE_URL } from '../config/passengerWeb';
 import { getHotelName } from '../config/defaultHotel';
+import { sendTrackingSms, toE164Phone } from '../api/sms';
 
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -55,6 +56,22 @@ const PREMIUM_ADD_ON_GROUPS = [
   },
 ] as const;
 
+const COUNTRIES = [
+  { code: 'US', name: 'United States', dial: '+1' },
+  { code: 'IN', name: 'India', dial: '+91' },
+  { code: 'GB', name: 'United Kingdom', dial: '+44' },
+  { code: 'AE', name: 'UAE', dial: '+971' },
+  { code: 'CA', name: 'Canada', dial: '+1' },
+  { code: 'FR', name: 'France', dial: '+33' },
+  { code: 'DE', name: 'Germany', dial: '+49' },
+  { code: 'SG', name: 'Singapore', dial: '+65' },
+  { code: 'AU', name: 'Australia', dial: '+61' },
+] as const;
+
+type Country = (typeof COUNTRIES)[number];
+
+const DEFAULT_GUEST_COUNTRY = COUNTRIES.find(country => country.code === 'US') ?? COUNTRIES[0];
+
 function generateRideToken(): string {
   return Math.random().toString(36).slice(2, 10).toUpperCase();
 }
@@ -99,16 +116,77 @@ function Segment({
   );
 }
 
+function CountryCodePicker({
+  selected,
+  onSelect,
+}: {
+  selected: Country;
+  onSelect: (country: Country) => void;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setVisible(true)}
+        style={({ pressed }) => [styles.countryPickerBtn, pressed && styles.countryPickerPressed]}
+        accessibilityRole="button"
+      >
+        <Phone color={GOLD} size={16} />
+        <Text style={styles.countryPickerCode}>{selected.code}</Text>
+        <Text style={styles.countryPickerDial}>{selected.dial}</Text>
+      </Pressable>
+
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <Pressable style={styles.countryModalBackdrop} onPress={() => setVisible(false)}>
+          <View style={styles.countryModalCard}>
+            <Text style={styles.countryModalTitle}>Select country code</Text>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(item) => `${item.code}-${item.dial}`}
+              renderItem={({ item }) => {
+                const active = item.code === selected.code && item.dial === selected.dial;
+                return (
+                  <Pressable
+                    onPress={() => {
+                      onSelect(item);
+                      setVisible(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.countryRow,
+                      active && styles.countryRowActive,
+                      pressed && styles.countryRowPressed,
+                    ]}
+                  >
+                    <Text style={[styles.countryRowCode, active && styles.countryRowActiveText]}>{item.code}</Text>
+                    <Text style={styles.countryRowName}>{item.name}</Text>
+                    <Text style={[styles.countryRowDial, active && styles.countryRowActiveText]}>{item.dial}</Text>
+                  </Pressable>
+                );
+              }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const { user, addOpenRideRequest } = useApp();
   const { light, medium } = useHaptics();
 
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestCountry, setGuestCountry] = useState<Country>(() => {
+    const userPhone = user?.phone ?? '';
+    return COUNTRIES.find((country) => userPhone.startsWith(country.dial)) ?? DEFAULT_GUEST_COUNTRY;
+  });
   const [emailError, setEmailError] = useState('');
   const [contactMethod, setContactMethod] = useState<'phone' | 'email'>('phone');
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [step, setStep] = useState<'contact' | 'addons'>('contact');
+  const [requestSending, setRequestSending] = useState(false);
   const [pickupLocation, setPickupLocation] = useState(
     route.params?.pickupLocation || getHotelName(user?.hotelName),
   );
@@ -122,10 +200,10 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
 
   const canSubmit =
     contactMethod === 'phone'
-      ? guestPhone.length > 5
+      ? guestPhone.replace(/\D/g, '').length > 5
       : guestEmail.length > 0 && validateEmail(guestEmail) && !emailError;
 
-  const guestLabel = contactMethod === 'phone' ? guestPhone : guestEmail;
+  const guestLabel = contactMethod === 'phone' ? toE164Phone(guestPhone, guestCountry.dial) : guestEmail;
 
   const handleContactContinue = async () => {
     await medium();
@@ -135,6 +213,27 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
   const handleRequest = async () => {
     await medium();
     const link = buildPassengerLink(pickupLocation);
+    const rideId = `ride-${Date.now()}`;
+    const phone = contactMethod === 'phone' ? toE164Phone(guestPhone, guestCountry.dial) : '';
+
+    if (contactMethod === 'phone') {
+      setRequestSending(true);
+      try {
+        await sendTrackingSms({
+          phone,
+          rideId,
+          trackingUrl: link,
+          pickup: pickupLocation,
+          dropoff: 'Destination selected by guest',
+        });
+      } catch (error) {
+        Alert.alert('Tracking SMS failed', error instanceof Error ? error.message : 'Could not send the tracking link.');
+        setRequestSending(false);
+        return;
+      }
+      setRequestSending(false);
+    }
+
     addOpenRideRequest({
       guestLabel,
       pickup: pickupLocation,
@@ -143,11 +242,12 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
       premiumAddOns: selectedAddOns,
     });
     navigation.navigate('WaitingForPayment', {
-      guestPhone: contactMethod === 'phone' ? guestPhone : '',
+      guestPhone: phone,
       guestEmail: contactMethod === 'email' ? guestEmail : '',
       bookingMode: 'instant',
       pickupLocation,
       passengerLink: link,
+      rideId,
       serviceType: 'transfer',
       premiumAddOns: selectedAddOns,
     });
@@ -227,17 +327,17 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
               >
                 <AppInput
                   leftSlot={
-                    <View style={styles.inputIcon}>
-                      {contactMethod === 'phone' ? (
-                        <Phone color={GOLD} size={17} />
-                      ) : (
+                    contactMethod === 'phone' ? (
+                      <CountryCodePicker selected={guestCountry} onSelect={setGuestCountry} />
+                    ) : (
+                      <View style={styles.inputIcon}>
                         <Mail color={GOLD} size={17} />
-                      )}
-                    </View>
+                      </View>
+                    )
                   }
                   placeholder={contactMethod === 'phone' ? 'Guest phone number' : 'Guest email address'}
                   value={contactMethod === 'phone' ? guestPhone : guestEmail}
-                  onChangeText={contactMethod === 'phone' ? setGuestPhone : handleEmailChange}
+                  onChangeText={contactMethod === 'phone' ? (value) => setGuestPhone(value.replace(/\D/g, '')) : handleEmailChange}
                   keyboardType={contactMethod === 'phone' ? 'phone-pad' : 'email-address'}
                   autoCapitalize="none"
                   containerStyle={styles.inputContainer}
@@ -344,6 +444,8 @@ export const GuestDetailsScreen = ({ navigation, route }: any) => {
             <AppButton
               label="Send ride request"
               onPress={handleRequest}
+              loading={requestSending}
+              disabled={requestSending}
               haptic="medium"
               style={styles.ctaBtn}
             />
@@ -587,6 +689,87 @@ const styles = StyleSheet.create({
   },
   inputBlock: {
     marginTop: 12,
+  },
+  countryPickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 12,
+    paddingRight: 10,
+    minHeight: 44,
+    borderRightWidth: 1,
+    borderRightColor: BORDER,
+  },
+  countryPickerPressed: {
+    opacity: 0.75,
+  },
+  countryPickerCode: {
+    color: GOLD,
+    fontSize: TYPE.small,
+    fontWeight: '800',
+  },
+  countryPickerDial: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: TYPE.body,
+    fontWeight: '700',
+  },
+  countryModalBackdrop: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.72)',
+  },
+  countryModalCard: {
+    maxHeight: '70%',
+    borderRadius: 18,
+    padding: 12,
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  countryModalTitle: {
+    color: '#fff',
+    fontSize: TYPE.title,
+    fontWeight: '800',
+    marginBottom: 10,
+    paddingHorizontal: 8,
+    paddingTop: 4,
+  },
+  countryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 46,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  countryRowActive: {
+    backgroundColor: GOLD_FAINT,
+    borderWidth: 1,
+    borderColor: GOLD_DIM,
+  },
+  countryRowPressed: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  countryRowCode: {
+    width: 30,
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: TYPE.body,
+    fontWeight: '800',
+  },
+  countryRowName: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: TYPE.body,
+    fontWeight: '600',
+  },
+  countryRowDial: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: TYPE.body,
+    fontWeight: '800',
+  },
+  countryRowActiveText: {
+    color: GOLD,
   },
   inputIcon: {
     paddingLeft: 12,

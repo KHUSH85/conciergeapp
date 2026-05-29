@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Modal, FlatList,
+  Modal, FlatList, Alert,
 } from 'react-native';
 import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
@@ -16,6 +16,7 @@ import { useSplashVisible } from '../context/SplashContext';
 import { loadMembershipState } from '../utils/appStorage';
 import { isUserOnboarded } from './FirstTimeSetupScreen';
 import { DEFAULT_US_HOTEL } from '../config/defaultHotel';
+import { sendOtp, toE164Phone, verifyOtp } from '../api/sms';
 
 const GOLD       = '#D4AF37';
 const GOLD_DIM   = 'rgba(212,175,55,0.25)';
@@ -201,30 +202,6 @@ const PhoneStep: React.FC<PhoneStepProps> = ({
         style={styles.phoneInput}
       />
 
-      <View style={styles.demoSection}>
-        <Text style={styles.demoHeading}>Demo accounts</Text>
-        {[
-          { number: '1511000001', label: 'Concierge' },
-          { number: '1522000002', label: 'Manager'   },
-        ].map(d => (
-          <TouchableOpacity
-            key={d.number}
-            onPress={async () => {
-              await light();
-              setPhone(d.number);
-              setRole(d.label.toLowerCase() as 'concierge' | 'manager');
-            }}
-            activeOpacity={0.6}
-            style={styles.demoRow}
-          >
-            <Text style={styles.demoNumber}>{country.dial} {d.number}</Text>
-            <View style={styles.demoBadge}>
-              <Text style={styles.demoBadgeText}>{d.label}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <AppButton
         label="Continue"
         onPress={onContinue}
@@ -245,10 +222,11 @@ const OTP_LENGTH = 6;
 interface OtpStepProps {
   phone: string; dialCode: string;
   onVerify: (code: string) => void;
+  onResend: () => Promise<void>;
   onBack: () => void; loading: boolean;
 }
 
-const OtpStep: React.FC<OtpStepProps> = ({ phone, dialCode, onVerify, onBack, loading }) => {
+const OtpStep: React.FC<OtpStepProps> = ({ phone, dialCode, onVerify, onResend, onBack, loading }) => {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
@@ -291,12 +269,7 @@ const OtpStep: React.FC<OtpStepProps> = ({ phone, dialCode, onVerify, onBack, lo
     setOtp(Array(OTP_LENGTH).fill(''));
     inputRefs.current[0]?.focus();
     startTimer();
-  };
-
-  const handleDemoFill = async () => {
-    await light();
-    setOtp('123456'.split(''));
-    setTimeout(() => onVerify('123456'), 120);
+    await onResend();
   };
 
   const masked = phone.length > 4 ? phone.slice(0, 2) + '....' + phone.slice(-2) : phone;
@@ -346,11 +319,6 @@ const OtpStep: React.FC<OtpStepProps> = ({ phone, dialCode, onVerify, onBack, lo
         }
       </View>
 
-      <TouchableOpacity onPress={handleDemoFill} activeOpacity={0.6} style={styles.demoOtp}>
-        <Text style={styles.demoOtpLabel}>Demo code</Text>
-        <Text style={styles.demoOtpCode}>1 2 3 4 5 6</Text>
-      </TouchableOpacity>
-
       <AppButton
         label="Verify and Sign in"
         onPress={() => onVerify(otp.join(''))}
@@ -373,43 +341,62 @@ export const LoginScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
 
   const handleContinue = useCallback(async () => {
+    const e164Phone = toE164Phone(phone, country.dial);
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    setStep('otp');
-  }, []);
+    try {
+      await sendOtp(e164Phone);
+      setStep('otp');
+    } catch (error) {
+      Alert.alert('SMS failed', error instanceof Error ? error.message : 'Could not send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [country.dial, phone]);
+
+  const handleResendOtp = useCallback(async () => {
+    try {
+      await sendOtp(toE164Phone(phone, country.dial));
+    } catch (error) {
+      Alert.alert('SMS failed', error instanceof Error ? error.message : 'Could not resend OTP. Please try again.');
+    }
+  }, [country.dial, phone]);
 
   const handleVerify = useCallback(async (code: string) => {
+    const e164Phone = toE164Phone(phone, country.dial);
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const persisted = await loadMembershipState();
-    const onboarded = await isUserOnboarded();
+    try {
+      await verifyOtp(e164Phone, code);
+      const persisted = await loadMembershipState();
+      const onboarded = await isUserOnboarded();
 
-    const newUser = {
-      id: '1',
-      name: role === 'manager' ? 'Sarah Mitchell' : 'James Anderson',
-      email: role === 'manager' ? 'sarah@grandhotel.com' : 'james@grandhotel.com',
-      phone: `${country.dial}${phone}`,
-      role,
-      hotelId: 'hotel-1',
-      hotelName: DEFAULT_US_HOTEL,
-      deviceBound: true,
-      deviceName: 'Concierge Desk Mobile',
-      kycStatus: 'approved' as const,
-      isMember: persisted.isMember,
-      rideCredit: persisted.isMember ? persisted.rideCredit : 0,
-    };
+      const newUser = {
+        id: '1',
+        name: role === 'manager' ? 'Sarah Mitchell' : 'James Anderson',
+        email: role === 'manager' ? 'sarah@grandhotel.com' : 'james@grandhotel.com',
+        phone: e164Phone,
+        role,
+        hotelId: 'hotel-1',
+        hotelName: DEFAULT_US_HOTEL,
+        deviceBound: true,
+        deviceName: 'Concierge Desk Mobile',
+        kycStatus: 'approved' as const,
+        isMember: persisted.isMember,
+        rideCredit: persisted.isMember ? persisted.rideCredit : 0,
+      };
 
-    setLoading(false);
-
-    if (!onboarded) {
-      // Do NOT call setUser here — pass the user data as a param so
-      // FirstTimeSetupScreen can call setUser after setup, avoiding
-      // the NavigationContainer key switch racing with navigation.replace.
-      navigation.replace('FirstTimeSetup', { role, pendingUser: newUser });
-    } else {
-      // Already onboarded — setUser triggers AppNavigator key switch to 'main'.
-      setUser(newUser);
+      if (!onboarded) {
+        // Do NOT call setUser here — pass the user data as a param so
+        // FirstTimeSetupScreen can call setUser after setup, avoiding
+        // the NavigationContainer key switch racing with navigation.replace.
+        navigation.replace('FirstTimeSetup', { role, pendingUser: newUser });
+      } else {
+        // Already onboarded — setUser triggers AppNavigator key switch to 'main'.
+        setUser(newUser);
+      }
+    } catch (error) {
+      Alert.alert('Verification failed', error instanceof Error ? error.message : 'Invalid verification code.');
+    } finally {
+      setLoading(false);
     }
   }, [phone, country, role, setUser, navigation]);
 
@@ -449,6 +436,7 @@ export const LoginScreen = ({ navigation }: any) => {
           <OtpStep
             phone={phone} dialCode={country.dial}
             onVerify={handleVerify}
+            onResend={handleResendOtp}
             onBack={() => setStep('phone')}
             loading={loading}
           />
@@ -487,22 +475,6 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 10, color: GREY, marginLeft: 2 },
   codeDivider: { width: 1, height: 20, backgroundColor: BORDER, marginLeft: 6 },
   ctaBtn: { width: '100%', marginBottom: 20 },
-  demoSection: { marginBottom: 28, gap: 8 },
-  demoHeading: {
-    fontSize: 11, color: GREY, letterSpacing: 1.5,
-    textTransform: 'uppercase', fontWeight: '500', marginBottom: 4,
-  },
-  demoRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 14, paddingHorizontal: 14,
-    backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, borderRadius: 10,
-  },
-  demoNumber: { fontSize: 14, color: WHITE, fontWeight: '500', letterSpacing: 0.5 },
-  demoBadge: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6,
-    borderWidth: 1, borderColor: GOLD_DIM, backgroundColor: GOLD_FAINT,
-  },
-  demoBadgeText: { fontSize: 11, color: GOLD, fontWeight: '600' },
   legal: { fontSize: 12, color: GREY, textAlign: 'center', lineHeight: 18 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   modalSheet: {
@@ -554,10 +526,4 @@ const styles = StyleSheet.create({
   resendTimer: { fontSize: 13, color: GREY },
   resendGold: { color: GOLD, fontWeight: '600' },
   resendActive: { fontSize: 13, color: GOLD, fontWeight: '600' },
-  demoOtp: {
-    alignItems: 'center', paddingVertical: 14, marginBottom: 24,
-    backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, borderRadius: 10, gap: 4,
-  },
-  demoOtpLabel: { fontSize: 11, color: GREY, letterSpacing: 1.5, textTransform: 'uppercase' },
-  demoOtpCode: { fontSize: 24, color: GOLD, fontWeight: '300', letterSpacing: 8 },
 });
