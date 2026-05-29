@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Share, Linking } from 'react-native';
+import { Alert, View, Text, Pressable, StyleSheet, Share, Linking } from 'react-native';
 import { MotiView } from 'moti';
 import {
   RefreshCw, ArrowLeft, Send,
@@ -12,6 +12,7 @@ import { AppButton } from '../components/AppButton';
 import { AppScreen } from '../components/AppScreen';
 import { useHaptics } from '../hooks/useHaptics';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
+import { sendTrackingSms } from '../api/sms';
 
 const GOLD = '#D4AF37';
 const GOLD_FAINT = 'rgba(212,175,55,0.08)';
@@ -52,11 +53,14 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
   const { light } = useHaptics();
   const delays = useStaggerAnimation();
   const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const guestPhone = route?.params?.guestPhone as string | undefined;
   const serviceType = route?.params?.serviceType as 'transfer' | 'hourly' | undefined;
   const pickup = route?.params?.pickupLocation as string | undefined;
   const passengerLink = route?.params?.passengerLink as string | undefined;
+  const rideId = route?.params?.rideId as string | undefined;
   const premiumAddOns = (route?.params?.premiumAddOns ?? []) as string[];
   const scheduledDate = route?.params?.scheduledDate as string | undefined;
   const scheduledTime = route?.params?.scheduledTime as string | undefined;
@@ -65,9 +69,24 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
   const hasMeta = Boolean(serviceType || scheduledDate || pickup);
 
   const handleResend = async () => {
+    if (!passengerLink || !guestPhone || resending) return;
     await light();
-    setResent(true);
-    setTimeout(() => setResent(false), 3000);
+    setResending(true);
+    try {
+      await sendTrackingSms({
+        phone: guestPhone,
+        rideId: rideId ?? `ride-${Date.now()}`,
+        trackingUrl: passengerLink,
+        pickup,
+        dropoff: 'Destination selected by guest',
+      });
+      setResent(true);
+      setTimeout(() => setResent(false), 3000);
+    } catch (error) {
+      Alert.alert('Resend failed', error instanceof Error ? error.message : 'Could not resend tracking link.');
+    } finally {
+      setResending(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -293,13 +312,15 @@ export const WaitingForPaymentScreen = ({ navigation, route }: any) => {
           style={({ pressed }) => [
             styles.resendBtn,
             resent && styles.resendBtnSuccess,
-            pressed && styles.resendBtnPressed,
+            (resending || !guestPhone) && styles.resendBtnDisabled,
+            pressed && !resending && styles.resendBtnPressed,
           ]}
+          disabled={resending || !guestPhone}
           accessibilityRole="button"
         >
           <RefreshCw color={resent ? GREEN : GOLD} size={15} />
           <Text style={[styles.resendText, resent && styles.resendTextSent]}>
-            {resent ? 'Link Resent!' : 'Resend Tracking Link'}
+            {resending ? 'Sending...' : resent ? 'Link Resent!' : 'Resend Tracking Link'}
           </Text>
         </Pressable>
 
@@ -600,6 +621,9 @@ const styles = StyleSheet.create({
   },
   resendBtnPressed: {
     opacity: 0.9,
+  },
+  resendBtnDisabled: {
+    opacity: 0.55,
   },
   resendBtnSuccess: {
     borderColor: 'rgba(34,197,94,0.35)',
